@@ -113,6 +113,13 @@
       margin-top: 4px;
     }
 
+    .score-player .player-ff {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 2px;
+      opacity: 0.7;
+    }
+
     .score-vs {
       color: var(--muted);
       font-size: 0.9rem;
@@ -346,46 +353,59 @@
     .b-abbr  { font-weight: 800; font-size: 0.8rem; }
     .b-otag  { font-size: 0.6rem; font-weight: 700; margin-left: auto; }
 
-    /* Gap between slots (shows series score) */
+    /* Gap between slots (shows series leader + score) */
     .b-gap {
-      height: 14px;
+      height: 24px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       position: relative;
+      gap: 1px;
+    }
+
+    .b-gap-leader {
+      font-size: 0.56rem;
+      font-weight: 700;
+      background: var(--bg);
+      padding: 0 3px;
+      z-index: 2;
+      position: relative;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .b-gap-score {
-      font-size: 0.6rem;
-      color: var(--muted);
-      font-weight: 700;
+      font-size: 0.62rem;
+      font-weight: 800;
       background: var(--bg);
       padding: 0 3px;
       z-index: 2;
       position: relative;
     }
 
-    /* Connector lines — East: right side  (top: 14=center of top slot, height: 42=to center of bottom, mid: 35) */
+    /* Connector lines — East: right side (slot=28px, gap=24px → total=80px)
+       top slot center: 14px, bottom slot center: 66px, midpoint: 40px */
     .east-round .b-matchup::before {
       content: ''; position: absolute;
-      right: 0; top: 14px; height: 42px; width: 1px;
+      right: 0; top: 14px; height: 52px; width: 1px;
       background: var(--border);
     }
     .east-round .b-matchup::after {
       content: ''; position: absolute;
-      right: -7px; top: 35px; height: 1px; width: 7px;
+      right: -7px; top: 40px; height: 1px; width: 7px;
       background: var(--border);
     }
 
     /* Connector lines — West: left side */
     .west-round .b-matchup::before {
       content: ''; position: absolute;
-      left: 0; top: 14px; height: 42px; width: 1px;
+      left: 0; top: 14px; height: 52px; width: 1px;
       background: var(--border);
     }
     .west-round .b-matchup::after {
       content: ''; position: absolute;
-      left: -7px; top: 35px; height: 1px; width: 7px;
+      left: -7px; top: 40px; height: 1px; width: 7px;
       background: var(--border);
     }
 
@@ -544,12 +564,14 @@
       <div class="player-name">Kevin</div>
       <div class="player-count" id="kevin-count">—</div>
       <div class="player-label">teams alive</div>
+      <div class="player-ff" id="kevin-ff"></div>
     </div>
     <div class="score-vs">VS</div>
     <div class="score-player derek">
       <div class="player-name">Derek</div>
       <div class="player-count" id="derek-count">—</div>
       <div class="player-label">teams alive</div>
+      <div class="player-ff" id="derek-ff"></div>
     </div>
   </div>
 
@@ -722,10 +744,40 @@ function playoffTeams(seriesMap) {
 }
 
 // ── Render ────────────────────────────────────────────────────────────
-function renderScoreboard(elim, inPlayoffs) {
+function calcMaxFinalFour(playerName, sm) {
+  const owned = new Set(DRAFT[playerName]);
+  let count = 0;
+  for (const conf of ['East','West']) {
+    const r1 = CONF_BRACKET[conf];
+    // R1: use real winner if known, else player's team wins
+    const r1p = r1.map(({t,b}) => {
+      const w = bracketWinner(t, b, sm);
+      if (w) return w;
+      if (owned.has(t)) return t;
+      if (owned.has(b)) return b;
+      return t; // neither owned — top seed advances
+    });
+    // R2
+    const r2p = R2_PAIRS.map(([i,j]) => {
+      const a = r1p[i], b = r1p[j];
+      const w = bracketWinner(a, b, sm);
+      if (w) return w;
+      if (owned.has(a)) return a;
+      if (owned.has(b)) return b;
+      return a;
+    });
+    // Both r2p teams reach Conference Finals = Final 4
+    for (const t of r2p) if (owned.has(t)) count++;
+  }
+  return count;
+}
+
+function renderScoreboard(elim, inPlayoffs, sm) {
   for (const name of ['Kevin','Derek']) {
     const alive = DRAFT[name].filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
+    const ff    = sm ? calcMaxFinalFour(name, sm) : '—';
     document.getElementById(`${name.toLowerCase()}-count`).textContent = alive;
+    document.getElementById(`${name.toLowerCase()}-ff`).textContent = `(${ff} max Final 4)`;
   }
 }
 
@@ -846,6 +898,18 @@ function bracketScore(a, b, sm) {
   return `${aW}–${bW}`;
 }
 
+// Returns { score, leader: 'Kevin'|'Derek'|'tied'|null }
+function bracketStatus(a, b, sm) {
+  if (!a || !b) return { score: '', leader: null };
+  const s = sm.get([a,b].sort().join('_'));
+  if (!s || (s.awayWins === 0 && s.homeWins === 0)) return { score: '', leader: null };
+  const aW = s.awayAbbr === a ? s.awayWins : s.homeWins;
+  const bW = s.awayAbbr === b ? s.awayWins : s.homeWins;
+  const score = `${aW}–${bW}`;
+  if (aW === bW) return { score, leader: 'tied' };
+  return { score, leader: aW > bW ? getOwner(a) : getOwner(b) };
+}
+
 function buildRounds(conf, sm) {
   const r1 = CONF_BRACKET[conf];
   const w1 = r1.map(m => bracketWinner(m.t, m.b, sm));
@@ -854,9 +918,9 @@ function buildRounds(conf, sm) {
   const r3 = [{t:w2[0], ts:null, b:w2[1], bs:null}];
   const w3 = r3.map(m => bracketWinner(m.t, m.b, sm));
   return {
-    r1: r1.map((m,i) => ({...m, winner:w1[i], score:bracketScore(m.t,m.b,sm)})),
-    r2: r2.map((m,i) => ({...m, winner:w2[i], score:bracketScore(m.t,m.b,sm)})),
-    r3: r3.map((m,i) => ({...m, winner:w3[i], score:bracketScore(m.t,m.b,sm)})),
+    r1: r1.map((m,i) => ({...m, winner:w1[i], ...bracketStatus(m.t,m.b,sm)})),
+    r2: r2.map((m,i) => ({...m, winner:w2[i], ...bracketStatus(m.t,m.b,sm)})),
+    r3: r3.map((m,i) => ({...m, winner:w3[i], ...bracketStatus(m.t,m.b,sm)})),
     confWinner: w3[0],
   };
 }
@@ -875,9 +939,20 @@ function bSlot(abbr, seed, isWin, isElim) {
 
 function bMatchup(m) {
   const tW = m.winner === m.t, bW = m.winner === m.b;
+  let gapHtml = '';
+  if (m.score) {
+    if (m.leader === 'tied') {
+      gapHtml = `<span class="b-gap-leader" style="color:var(--muted)">Tied</span>
+                 <span class="b-gap-score" style="color:var(--muted)">${m.score}</span>`;
+    } else if (m.leader) {
+      const col = m.leader === 'Kevin' ? 'var(--kevin)' : 'var(--derek)';
+      gapHtml = `<span class="b-gap-leader" style="color:${col}">${m.leader} leads</span>
+                 <span class="b-gap-score" style="color:${col}">${m.score}</span>`;
+    }
+  }
   return `<div class="b-matchup">
     ${bSlot(m.t, m.ts, tW, m.winner && !tW)}
-    <div class="b-gap"><span class="b-gap-score">${m.score||''}</span></div>
+    <div class="b-gap">${gapHtml}</div>
     ${bSlot(m.b, m.bs, bW, m.winner && !bW)}
   </div>`;
 }
@@ -889,7 +964,7 @@ function renderBracket(sm) {
     t: E.confWinner, ts: null,
     b: W.confWinner, bs: null,
     winner: bracketWinner(E.confWinner, W.confWinner, sm),
-    score:  bracketScore(E.confWinner, W.confWinner, sm),
+    ...bracketStatus(E.confWinner, W.confWinner, sm),
   };
 
   document.getElementById('bracket-container').innerHTML = `
@@ -1002,7 +1077,7 @@ async function loadData() {
     const elim     = eliminated(sm);
     const inP      = playoffTeams(sm);
 
-    renderScoreboard(elim, inP);
+    renderScoreboard(elim, inP, sm);
     renderBracket(sm);
     renderLiveGames(liveEvents);
     renderMatchups(sm, elim);
@@ -1030,7 +1105,7 @@ async function loadData() {
         const sm   = new Map(c.series);
         const elim = new Set(c.elim);
         const inP  = new Set(c.inPlayoffs);
-        renderScoreboard(elim, inP);
+        renderScoreboard(elim, inP, sm);
         renderMatchups(sm, elim);
         renderTeams(elim, inP);
         const ago = Math.round((Date.now() - c.ts) / 60000);
