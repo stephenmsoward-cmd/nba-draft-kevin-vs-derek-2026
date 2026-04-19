@@ -573,6 +573,19 @@ function renderScoreboard(elim, inPlayoffs) {
 
 const ROUND_ORDER = { '1st Round':1, 'Conf. Semis':2, 'Conf. Finals':3, 'NBA Finals':4, 'Playoffs':5 };
 
+function ownerSummary(s) {
+  const ao = getOwner(s.awayAbbr), ho = getOwner(s.homeAbbr);
+  const { awayWins: aw, homeWins: hw } = s;
+  if (s.completed) {
+    if (aw >= 4) return `${ao} wins series ${aw}–${hw}`;
+    if (hw >= 4) return `${ho} wins series ${hw}–${aw}`;
+  }
+  if (aw > hw) return `${ao} leads ${aw}–${hw}`;
+  if (hw > aw) return `${ho} leads ${hw}–${aw}`;
+  if (aw > 0)  return `Series tied ${aw}–${hw}`;
+  return '';
+}
+
 function renderMatchups(seriesMap, elim) {
   const el = document.getElementById('matchups-container');
   if (!seriesMap.size) {
@@ -605,7 +618,7 @@ function renderMatchups(seriesMap, elim) {
             <div class="series-team-owner ${ownerCls(hoOwner)}">${hoOwner || '—'}</div>
           </div>
         </div>
-        ${s.summary ? `<div class="series-summary-text">${s.summary}</div>` : ''}
+        ${ownerSummary(s) ? `<div class="series-summary-text">${ownerSummary(s)}</div>` : ''}
       </div>`;
   }).join('');
 }
