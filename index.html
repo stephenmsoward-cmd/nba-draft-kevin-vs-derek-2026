@@ -513,12 +513,14 @@ function processEvents(events) {
     const homeAbbr = norm(home.team?.abbreviation);
     const key = [awayAbbr, homeAbbr].sort().join('_');
 
-    // Series wins from comp.series.competitors (most reliable)
+    // Series wins — ESPN series.competitors use team ID, not abbreviation
     let awayWins = 0, homeWins = 0;
     const serObj = comp.series;
+    const idToAbbr = {};
+    for (const c of cs) { if (c.team?.id) idToAbbr[c.team.id] = norm(c.team.abbreviation); }
     if (serObj?.competitors?.length) {
       for (const sc of serObj.competitors) {
-        const a = norm(sc.team?.abbreviation);
+        const a = idToAbbr[sc.id] || norm(sc.team?.abbreviation);
         if (a === awayAbbr) awayWins = sc.wins || 0;
         else if (a === homeAbbr) homeWins = sc.wins || 0;
       }
@@ -618,7 +620,7 @@ function renderMatchups(seriesMap, elim) {
             <div class="series-team-owner ${ownerCls(hoOwner)}">${hoOwner || '—'}</div>
           </div>
         </div>
-        ${ownerSummary(s) ? `<div class="series-summary-text">${ownerSummary(s)}</div>` : ''}
+        ${(ownerSummary(s) || s.summary) ? `<div class="series-summary-text">${ownerSummary(s) || s.summary}</div>` : ''}
       </div>`;
   }).join('');
 }
