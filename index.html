@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 NBA Playoff Draft — Kevin vs Derek</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #060b14;
+      --surface: #0d1424;
+      --surface2: #111d30;
+      --border: #1a2840;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --kevin: #3b82f6;
+      --derek: #ef4444;
+      --green: #22c55e;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 32px 0 24px;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--kevin) 30%, var(--derek) 70%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .last-updated { color: var(--muted); font-size: 0.85rem; }
+
+    .btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: color 0.15s, background 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .btn:hover { background: var(--border); color: var(--text); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 36px;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .score-player { text-align: center; }
+
+    .score-player .player-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .score-player.kevin .player-name { color: var(--kevin); }
+    .score-player.derek .player-name { color: var(--derek); }
+
+    .score-player .player-count {
+      font-size: 3.5rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .score-player.kevin .player-count { color: var(--kevin); }
+    .score-player.derek .player-count { color: var(--derek); }
+
+    .score-player .player-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .score-vs {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    /* Section header */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .section-line { flex: 1; height: 1px; background: var(--border); }
+
+    /* Series cards */
+    .matchups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .series-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .series-card.series-over { opacity: 0.45; }
+
+    .round-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    .series-body {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .series-team-block {
+      flex: 1;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .series-team-abbr {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .series-team-abbr.elim {
+      text-decoration: line-through;
+      opacity: 0.35;
+    }
+
+    .series-team-owner {
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-top: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .owner-kevin { color: var(--kevin); }
+    .owner-derek { color: var(--derek); }
+    .owner-none  { color: var(--muted); }
+
+    .series-score-block { text-align: center; flex-shrink: 0; }
+
+    .series-score {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      min-width: 54px;
+    }
+
+    .series-summary-text {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Teams columns */
+    .teams-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .teams-column {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .teams-column-header {
+      padding: 13px 16px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .teams-column.kevin .teams-column-header { color: var(--kevin); }
+    .teams-column.derek .teams-column-header { color: var(--derek); }
+
+    .team-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--bg);
+      gap: 10px;
+    }
+
+    .team-row:last-child { border-bottom: none; }
+    .team-row.eliminated { opacity: 0.28; }
+    .team-row.no-playoffs { opacity: 0.2; }
+    .team-row.eliminated .team-abbr { text-decoration: line-through; }
+
+    .team-row .team-abbr { font-size: 0.88rem; font-weight: 800; width: 36px; flex-shrink: 0; }
+    .team-row .team-name { font-size: 0.8rem; color: var(--muted); flex: 1; }
+    .team-row .team-status { font-size: 0.75rem; font-weight: 700; }
+
+    .s-alive { color: var(--green); }
+    .s-elim  { color: var(--derek); }
+    .s-none  { color: var(--muted); }
+
+    /* Misc */
+    .loading-msg {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      grid-column: 1 / -1;
+    }
+
+    .error-banner {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #fca5a5;
+      font-size: 0.8rem;
+      margin-bottom: 20px;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.68rem;
+      padding: 20px 0 40px;
+      opacity: 0.4;
+    }
+
+    @media (max-width: 560px) {
+      .scoreboard {
+        grid-template-columns: 1fr 1fr;
+      }
+      .score-vs { display: none; }
+      .teams-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>2026 NBA Playoff Draft</h1>
+    <div class="header-meta">
+      <span class="last-updated" id="last-updated">Loading...</span>
+      <button class="btn" id="refresh-btn" onclick="loadData()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div id="error-container"></div>
+
+  <div class="scoreboard">
+    <div class="score-player kevin">
+      <div class="player-name">Kevin</div>
+      <div class="player-count" id="kevin-count">—</div>
+      <div class="player-label">teams alive</div>
+    </div>
+    <div class="score-vs">VS</div>
+    <div class="score-player derek">
+      <div class="player-name">Derek</div>
+      <div class="player-count" id="derek-count">—</div>
+      <div class="player-label">teams alive</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Playoff Series</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="matchups-grid" id="matchups-container">
+    <div class="loading-msg">Fetching playoff data…</div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Draft Picks</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="teams-grid" id="teams-container"></div>
+
+  <div class="footer">Data via ESPN · Updates on page load</div>
+
+</div>
+
+<script>
+// ── Draft config ──────────────────────────────────────────────────────
+const DRAFT = {
+  Kevin: ['SAS','DEN','NYK','CLE','ATL','LAL','CHA','PHI','POR','GSW'],
+  Derek: ['OKC','DET','BOS','HOU','MIN','TOR','ORL','PHX','LAC','MIA'],
+};
+
+const TEAM_NAMES = {
+  OKC:'Thunder',  DET:'Pistons',     BOS:'Celtics',   HOU:'Rockets',
+  MIN:'Timberwolves', TOR:'Raptors', ORL:'Magic',     PHX:'Suns',
+  LAC:'Clippers', MIA:'Heat',        SAS:'Spurs',     DEN:'Nuggets',
+  NYK:'Knicks',   CLE:'Cavaliers',   ATL:'Hawks',     LAL:'Lakers',
+  CHA:'Hornets',  PHI:'76ers',       POR:'Trail Blazers', GSW:'Warriors',
+};
+
+// ESPN sometimes uses shorter abbreviations
+const ABBR_FIX = { PHO:'PHX', GS:'GSW', SA:'SAS', NY:'NYK', NO:'NOP' };
+const norm = a => { if (!a) return ''; const u = a.toUpperCase(); return ABBR_FIX[u] || u; };
+const getOwner = abbr => { for (const [n,t] of Object.entries(DRAFT)) if (t.includes(abbr)) return n; return null; };
+const ownerCls = o => o === 'Kevin' ? 'owner-kevin' : o === 'Derek' ? 'owner-derek' : 'owner-none';
+
+// ── ESPN fetching ─────────────────────────────────────────────────────
+function playoffDates() {
+  const start = new Date('2026-04-18');
+  const today = new Date();
+  const dates = [];
+  for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1))
+    dates.push(d.toISOString().slice(0,10).replace(/-/g,''));
+  return dates;
+}
+
+async function fetchDate(date) {
+  try {
+    const r = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${date}&seasontype=3`
+    );
+    const j = await r.json();
+    return (j.events || []).map(e => ({ ...e, _date: date }));
+  } catch { return []; }
+}
+
+async function fetchAll() {
+  const all = await Promise.all(playoffDates().map(fetchDate));
+  return all.flat();
+}
+
+// ── Series processing ─────────────────────────────────────────────────
+function processEvents(events) {
+  // Chronological order — later events overwrite earlier ones for same series
+  events.sort((a, b) => a._date.localeCompare(b._date));
+
+  const map = new Map();
+
+  for (const ev of events) {
+    const comp = ev.competitions?.[0];
+    if (!comp) continue;
+
+    const cs = comp.competitors || [];
+    if (cs.length < 2) continue;
+
+    const away = cs.find(c => c.homeAway === 'away') || cs[0];
+    const home = cs.find(c => c.homeAway === 'home') || cs[1];
+
+    const awayAbbr = norm(away.team?.abbreviation);
+    const homeAbbr = norm(home.team?.abbreviation);
+    const key = [awayAbbr, homeAbbr].sort().join('_');
+
+    // Series wins from comp.series.competitors (most reliable)
+    let awayWins = 0, homeWins = 0;
+    const serObj = comp.series;
+    if (serObj?.competitors?.length) {
+      for (const sc of serObj.competitors) {
+        const a = norm(sc.team?.abbreviation);
+        if (a === awayAbbr) awayWins = sc.wins || 0;
+        else if (a === homeAbbr) homeWins = sc.wins || 0;
+      }
+    }
+
+    // Round label from event notes
+    const note = comp.notes?.[0]?.headline || '';
+    let round = 'Playoffs';
+    if      (/first round/i.test(note))      round = '1st Round';
+    else if (/second round|conf.*semi/i.test(note)) round = 'Conf. Semis';
+    else if (/conf.*final/i.test(note))      round = 'Conf. Finals';
+    else if (/nba final/i.test(note))        round = 'NBA Finals';
+
+    const completed = Math.max(awayWins, homeWins) >= 4;
+
+    map.set(key, {
+      key, awayAbbr, homeAbbr,
+      awayName: away.team?.displayName || awayAbbr,
+      homeName: home.team?.displayName || homeAbbr,
+      awayWins, homeWins,
+      summary: serObj?.summary || '',
+      completed, round,
+    });
+  }
+
+  return map;
+}
+
+function eliminated(seriesMap) {
+  const out = new Set();
+  for (const s of seriesMap.values()) {
+    if (!s.completed) continue;
+    if (s.awayWins >= 4) out.add(s.homeAbbr);
+    else if (s.homeWins >= 4) out.add(s.awayAbbr);
+  }
+  return out;
+}
+
+function playoffTeams(seriesMap) {
+  const out = new Set();
+  for (const s of seriesMap.values()) { out.add(s.awayAbbr); out.add(s.homeAbbr); }
+  return out;
+}
+
+// ── Render ────────────────────────────────────────────────────────────
+function renderScoreboard(elim, inPlayoffs) {
+  for (const name of ['Kevin','Derek']) {
+    const alive = DRAFT[name].filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
+    document.getElementById(`${name.toLowerCase()}-count`).textContent = alive;
+  }
+}
+
+const ROUND_ORDER = { '1st Round':1, 'Conf. Semis':2, 'Conf. Finals':3, 'NBA Finals':4, 'Playoffs':5 };
+
+function renderMatchups(seriesMap, elim) {
+  const el = document.getElementById('matchups-container');
+  if (!seriesMap.size) {
+    el.innerHTML = '<div class="loading-msg">No playoff series found yet — check back once the playoffs begin.</div>';
+    return;
+  }
+
+  const sorted = [...seriesMap.values()].sort((a,b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return (ROUND_ORDER[a.round]||5) - (ROUND_ORDER[b.round]||5);
+  });
+
+  el.innerHTML = sorted.map(s => {
+    const aoOwner = getOwner(s.awayAbbr);
+    const hoOwner = getOwner(s.homeAbbr);
+    const hasScore = s.awayWins > 0 || s.homeWins > 0;
+    return `
+      <div class="series-card ${s.completed ? 'series-over' : ''}">
+        <div class="round-label">${s.round}</div>
+        <div class="series-body">
+          <div class="series-team-block">
+            <div class="series-team-abbr ${elim.has(s.awayAbbr) ? 'elim' : ''}">${s.awayAbbr}</div>
+            <div class="series-team-owner ${ownerCls(aoOwner)}">${aoOwner || '—'}</div>
+          </div>
+          <div class="series-score-block">
+            <div class="series-score">${hasScore ? `${s.awayWins}–${s.homeWins}` : '–'}</div>
+          </div>
+          <div class="series-team-block">
+            <div class="series-team-abbr ${elim.has(s.homeAbbr) ? 'elim' : ''}">${s.homeAbbr}</div>
+            <div class="series-team-owner ${ownerCls(hoOwner)}">${hoOwner || '—'}</div>
+          </div>
+        </div>
+        ${s.summary ? `<div class="series-summary-text">${s.summary}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function renderTeams(elim, inPlayoffs) {
+  const el = document.getElementById('teams-container');
+  const knownPlayoffs = inPlayoffs.size > 0;
+
+  const col = (name) => {
+    const cls = name.toLowerCase();
+    const rows = DRAFT[name].map(abbr => {
+      const inP = inPlayoffs.has(abbr);
+      const isElim = elim.has(abbr);
+      const rowCls = isElim ? 'eliminated' : (!inP && knownPlayoffs ? 'no-playoffs' : '');
+      const sCls   = isElim ? 's-elim' : (!inP && knownPlayoffs ? 's-none' : 's-alive');
+      const icon   = isElim ? '✗' : (!inP && knownPlayoffs ? '—' : '✓');
+      return `
+        <div class="team-row ${rowCls}">
+          <span class="team-abbr">${abbr}</span>
+          <span class="team-name">${TEAM_NAMES[abbr] || ''}</span>
+          <span class="team-status ${sCls}">${icon}</span>
+        </div>`;
+    }).join('');
+    return `
+      <div class="teams-column ${cls}">
+        <div class="teams-column-header">${name}'s Picks</div>
+        ${rows}
+      </div>`;
+  };
+
+  el.innerHTML = col('Kevin') + col('Derek');
+}
+
+// ── Main ──────────────────────────────────────────────────────────────
+async function loadData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ Loading…';
+  document.getElementById('error-container').innerHTML = '';
+
+  try {
+    const events   = await fetchAll();
+    const sm       = processEvents(events);
+    const elim     = eliminated(sm);
+    const inP      = playoffTeams(sm);
+
+    renderScoreboard(elim, inP);
+    renderMatchups(sm, elim);
+    renderTeams(elim, inP);
+
+    const now = new Date();
+    document.getElementById('last-updated').textContent =
+      `Updated ${now.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
+
+    localStorage.setItem('nba26-cache', JSON.stringify({
+      series:      [...sm.entries()],
+      elim:        [...elim],
+      inPlayoffs:  [...inP],
+      ts:          Date.now(),
+    }));
+
+  } catch (err) {
+    document.getElementById('error-container').innerHTML =
+      `<div class="error-banner">⚠ Could not load data: ${err.message}</div>`;
+    document.getElementById('last-updated').textContent = 'Error — showing cached data';
+
+    try {
+      const c = JSON.parse(localStorage.getItem('nba26-cache') || 'null');
+      if (c) {
+        const sm   = new Map(c.series);
+        const elim = new Set(c.elim);
+        const inP  = new Set(c.inPlayoffs);
+        renderScoreboard(elim, inP);
+        renderMatchups(sm, elim);
+        renderTeams(elim, inP);
+        const ago = Math.round((Date.now() - c.ts) / 60000);
+        document.getElementById('last-updated').textContent = `Cached data (${ago}m ago)`;
+      }
+    } catch {}
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↻ Refresh';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
