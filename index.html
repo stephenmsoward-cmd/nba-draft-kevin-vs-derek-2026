@@ -477,6 +477,51 @@
     }
     .bcl-finals { min-width: 130px; }
 
+    /* Past rounds — dim when complete */
+    .b-round.past-round { opacity: 0.3; }
+
+    /* Round groups in Series view */
+    .round-group { margin-bottom: 16px; }
+
+    .round-group-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 10px;
+      transition: background 0.15s;
+    }
+    .round-group-header:hover { background: var(--surface2); }
+
+    .round-group-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
+
+    .round-group-status {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .round-group-chevron {
+      font-size: 0.75rem;
+      color: var(--muted);
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+    .round-group-chevron.open { transform: rotate(180deg); }
+
+    .round-group-cards.collapsed { display: none; }
+
     /* Today's Games */
     .games-grid {
       display: grid;
@@ -644,7 +689,7 @@
   </div>
 
   <div id="view-series" style="display:none">
-    <div class="matchups-grid" id="matchups-container">
+    <div id="matchups-container">
       <div class="loading-msg">Fetching playoff data…</div>
     </div>
   </div>
@@ -831,6 +876,42 @@ function ownerSummary(s) {
   return '';
 }
 
+// Tracks which round groups are manually open in Series view
+const openRounds = new Set(['__init__']);
+
+function toggleRound(round) {
+  const key = round.replace(/[\s.]/g, '_');
+  if (openRounds.has(round)) openRounds.delete(round);
+  else openRounds.add(round);
+  const cards   = document.getElementById(`rg-cards-${key}`);
+  const chevron = document.getElementById(`rg-chev-${key}`);
+  if (cards)   cards.classList.toggle('collapsed', !openRounds.has(round));
+  if (chevron) chevron.classList.toggle('open', openRounds.has(round));
+}
+
+function seriesCardHTML(s, elim) {
+  const aoOwner = getOwner(s.awayAbbr);
+  const hoOwner = getOwner(s.homeAbbr);
+  const hasScore = s.awayWins > 0 || s.homeWins > 0;
+  return `
+    <div class="series-card ${s.completed ? 'series-over' : ''}">
+      <div class="series-body">
+        <div class="series-team-block">
+          <div class="series-team-abbr ${elim.has(s.awayAbbr) ? 'elim' : ''}">${s.awayAbbr}</div>
+          <div class="series-team-owner ${ownerCls(aoOwner)}">${aoOwner || '—'}</div>
+        </div>
+        <div class="series-score-block">
+          <div class="series-score">${hasScore ? `${s.awayWins}–${s.homeWins}` : '–'}</div>
+        </div>
+        <div class="series-team-block">
+          <div class="series-team-abbr ${elim.has(s.homeAbbr) ? 'elim' : ''}">${s.homeAbbr}</div>
+          <div class="series-team-owner ${ownerCls(hoOwner)}">${hoOwner || '—'}</div>
+        </div>
+      </div>
+      ${(ownerSummary(s) || s.summary) ? `<div class="series-summary-text">${ownerSummary(s) || s.summary}</div>` : ''}
+    </div>`;
+}
+
 function renderMatchups(seriesMap, elim) {
   const el = document.getElementById('matchups-container');
   if (!seriesMap.size) {
@@ -838,32 +919,44 @@ function renderMatchups(seriesMap, elim) {
     return;
   }
 
-  const sorted = [...seriesMap.values()].sort((a,b) => {
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    return (ROUND_ORDER[a.round]||5) - (ROUND_ORDER[b.round]||5);
-  });
+  // Group series by round in order
+  const roundOrder = ['1st Round','Conf. Semis','Conf. Finals','NBA Finals','Playoffs'];
+  const groups = {};
+  for (const s of seriesMap.values()) {
+    if (!groups[s.round]) groups[s.round] = [];
+    groups[s.round].push(s);
+  }
 
-  el.innerHTML = sorted.map(s => {
-    const aoOwner = getOwner(s.awayAbbr);
-    const hoOwner = getOwner(s.homeAbbr);
-    const hasScore = s.awayWins > 0 || s.homeWins > 0;
+  // Current active round = first round with any incomplete series
+  const activeRound = roundOrder.find(r => groups[r]?.some(s => !s.completed)) || roundOrder[0];
+
+  // On first load, default open state: only the active round
+  if (openRounds.has('__init__')) {
+    openRounds.clear();
+    openRounds.add(activeRound);
+  }
+
+  el.innerHTML = roundOrder.filter(r => groups[r]).map(round => {
+    const series   = groups[round].sort((a,b) => a.completed - b.completed);
+    const done     = series.filter(s => s.completed).length;
+    const total    = series.length;
+    const allDone  = done === total;
+    const isOpen   = openRounds.has(round);
+    const key      = round.replace(/[\s.]/g, '_');
+    const status   = allDone ? `${total}/${total} complete ✓` : `${done}/${total} complete`;
+
     return `
-      <div class="series-card ${s.completed ? 'series-over' : ''}">
-        <div class="round-label">${s.round}</div>
-        <div class="series-body">
-          <div class="series-team-block">
-            <div class="series-team-abbr ${elim.has(s.awayAbbr) ? 'elim' : ''}">${s.awayAbbr}</div>
-            <div class="series-team-owner ${ownerCls(aoOwner)}">${aoOwner || '—'}</div>
-          </div>
-          <div class="series-score-block">
-            <div class="series-score">${hasScore ? `${s.awayWins}–${s.homeWins}` : '–'}</div>
-          </div>
-          <div class="series-team-block">
-            <div class="series-team-abbr ${elim.has(s.homeAbbr) ? 'elim' : ''}">${s.homeAbbr}</div>
-            <div class="series-team-owner ${ownerCls(hoOwner)}">${hoOwner || '—'}</div>
+      <div class="round-group">
+        <div class="round-group-header" onclick="toggleRound('${round}')">
+          <span class="round-group-title">${round}</span>
+          <span class="round-group-status">${status}</span>
+          <span class="round-group-chevron ${isOpen ? 'open' : ''}" id="rg-chev-${key}">▾</span>
+        </div>
+        <div class="round-group-cards ${isOpen ? '' : 'collapsed'}" id="rg-cards-${key}">
+          <div class="matchups-grid">
+            ${series.map(s => seriesCardHTML(s, elim)).join('')}
           </div>
         </div>
-        ${(ownerSummary(s) || s.summary) ? `<div class="series-summary-text">${ownerSummary(s) || s.summary}</div>` : ''}
       </div>`;
   }).join('');
 }
@@ -906,22 +999,23 @@ function switchTab(tab) {
 }
 
 // ── Bracket ───────────────────────────────────────────────────────────
+// Bracket order matches actual NBA bracket (top → bottom per conference)
 const CONF_BRACKET = {
   East: [
-    {t:'DET',ts:1, b:'ORL',bs:8},
-    {t:'BOS',ts:2, b:'PHI',bs:7},
-    {t:'NYK',ts:3, b:'ATL',bs:6},
-    {t:'CLE',ts:4, b:'TOR',bs:5},
+    {t:'DET',ts:1, b:'ORL',bs:8},  // top
+    {t:'CLE',ts:4, b:'TOR',bs:5},  // 1/8 winner plays 4/5 winner in R2
+    {t:'NYK',ts:3, b:'ATL',bs:6},  // 2/7 winner plays 3/6 winner in R2
+    {t:'BOS',ts:2, b:'PHI',bs:7},  // bottom
   ],
   West: [
-    {t:'OKC',ts:1, b:'PHX',bs:8},
-    {t:'SAS',ts:2, b:'POR',bs:7},
-    {t:'DEN',ts:3, b:'MIN',bs:6},
+    {t:'OKC',ts:1, b:'PHX',bs:8},  // top
     {t:'LAL',ts:4, b:'HOU',bs:5},
+    {t:'DEN',ts:3, b:'MIN',bs:6},
+    {t:'SAS',ts:2, b:'POR',bs:7},  // bottom
   ],
 };
-// NBA fixed bracket: 1/8 winner vs 4/5 winner; 2/7 winner vs 3/6 winner
-const R2_PAIRS = [[0,3],[1,2]];
+// Adjacent pairs: [0,1] top half → R2 top; [2,3] bottom half → R2 bottom
+const R2_PAIRS = [[0,1],[2,3]];
 
 function bracketWinner(a, b, sm) {
   if (!a || !b) return null;
@@ -966,6 +1060,8 @@ function buildRounds(conf, sm) {
     r2: r2.map((m,i) => ({...m, winner:w2[i], ...bracketStatus(m.t,m.b,sm)})),
     r3: r3.map((m,i) => ({...m, winner:w3[i], ...bracketStatus(m.t,m.b,sm)})),
     confWinner: w3[0],
+    r1Done: w1.every(Boolean),
+    r2Done: w2.every(Boolean),
   };
 }
 
@@ -1013,11 +1109,16 @@ function renderBracket(sm) {
     ...bracketStatus(E.confWinner, W.confWinner, sm),
   };
 
+  const r1Past = E.r1Done && W.r1Done;
+  const r2Past = E.r2Done && W.r2Done;
+  const p1 = r1Past ? 'past-round' : '';
+  const p2 = r2Past ? 'past-round' : '';
+
   document.getElementById('bracket-container').innerHTML = `
     <div class="bracket-wrap">
       <div class="conf-bracket">
-        <div class="b-round east-round">${E.r1.map(bMatchup).join('')}</div>
-        <div class="b-round east-round">${E.r2.map(bMatchup).join('')}</div>
+        <div class="b-round east-round ${p1}">${E.r1.map(bMatchup).join('')}</div>
+        <div class="b-round east-round ${p2}">${E.r2.map(bMatchup).join('')}</div>
         <div class="b-round">${E.r3.map(bMatchup).join('')}</div>
       </div>
       <div class="finals-col">
@@ -1026,8 +1127,8 @@ function renderBracket(sm) {
       </div>
       <div class="conf-bracket">
         <div class="b-round">${W.r3.map(bMatchup).join('')}</div>
-        <div class="b-round west-round">${W.r2.map(bMatchup).join('')}</div>
-        <div class="b-round west-round">${W.r1.map(bMatchup).join('')}</div>
+        <div class="b-round west-round ${p2}">${W.r2.map(bMatchup).join('')}</div>
+        <div class="b-round west-round ${p1}">${W.r1.map(bMatchup).join('')}</div>
       </div>
     </div>`;
 }
