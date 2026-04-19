@@ -72,6 +72,36 @@
     .btn:hover { background: var(--border); color: var(--text); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    .view-toggle {
+      display: flex;
+      gap: 2px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      flex-shrink: 0;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 4px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .toggle-btn.active {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .toggle-btn:hover:not(.active) { color: var(--text); }
+
     /* Scoreboard */
     .scoreboard {
       display: grid;
@@ -576,29 +606,6 @@
   </div>
 
   <div class="section-header">
-    <span class="section-title">Playoff Bracket</span>
-    <div class="section-line"></div>
-  </div>
-  <div class="bracket-outer">
-    <div class="bracket-conf-labels">
-      <div class="bcl-conf">
-        <div class="bcl-cell">1st Rd</div>
-        <div class="bcl-cell">Semis</div>
-        <div class="bcl-cell">East Finals</div>
-      </div>
-      <div class="bcl-finals"></div>
-      <div class="bcl-conf">
-        <div class="bcl-cell">West Finals</div>
-        <div class="bcl-cell">Semis</div>
-        <div class="bcl-cell">1st Rd</div>
-      </div>
-    </div>
-    <div id="bracket-container">
-      <div class="loading-msg" style="min-width:700px">Loading bracket…</div>
-    </div>
-  </div>
-
-  <div class="section-header">
     <span class="section-title">Today's Games</span>
     <div class="section-line"></div>
   </div>
@@ -609,9 +616,37 @@
   <div class="section-header">
     <span class="section-title">Playoff Series</span>
     <div class="section-line"></div>
+    <div class="view-toggle">
+      <button class="toggle-btn active" id="tab-bracket" onclick="switchTab('bracket')">Bracket</button>
+      <button class="toggle-btn" id="tab-series" onclick="switchTab('series')">Series</button>
+    </div>
   </div>
-  <div class="matchups-grid" id="matchups-container">
-    <div class="loading-msg">Fetching playoff data…</div>
+
+  <div id="view-bracket">
+    <div class="bracket-outer">
+      <div class="bracket-conf-labels">
+        <div class="bcl-conf">
+          <div class="bcl-cell">1st Rd</div>
+          <div class="bcl-cell">Semis</div>
+          <div class="bcl-cell">East Finals</div>
+        </div>
+        <div class="bcl-finals"></div>
+        <div class="bcl-conf">
+          <div class="bcl-cell">West Finals</div>
+          <div class="bcl-cell">Semis</div>
+          <div class="bcl-cell">1st Rd</div>
+        </div>
+      </div>
+      <div id="bracket-container">
+        <div class="loading-msg" style="min-width:700px">Loading bracket…</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-series" style="display:none">
+    <div class="matchups-grid" id="matchups-container">
+      <div class="loading-msg">Fetching playoff data…</div>
+    </div>
   </div>
 
   <div class="section-header">
@@ -860,6 +895,14 @@ function renderTeams(elim, inPlayoffs) {
   };
 
   el.innerHTML = col('Kevin') + col('Derek');
+}
+
+// ── Tab toggle ────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('view-bracket').style.display = tab === 'bracket' ? '' : 'none';
+  document.getElementById('view-series').style.display  = tab === 'series'  ? '' : 'none';
+  document.getElementById('tab-bracket').classList.toggle('active', tab === 'bracket');
+  document.getElementById('tab-series').classList.toggle('active',  tab === 'series');
 }
 
 // ── Bracket ───────────────────────────────────────────────────────────
