@@ -941,16 +941,17 @@ function bracketScore(a, b, sm) {
   return `${aW}–${bW}`;
 }
 
-// Returns { score, leader: 'Kevin'|'Derek'|'tied'|null }
+// Returns { score, leader: 'Kevin'|'Derek'|'tied'|null, summary }
 function bracketStatus(a, b, sm) {
-  if (!a || !b) return { score: '', leader: null };
+  if (!a || !b) return { score: '', leader: null, summary: '' };
   const s = sm.get([a,b].sort().join('_'));
-  if (!s || (s.awayWins === 0 && s.homeWins === 0)) return { score: '', leader: null };
+  if (!s) return { score: '', leader: null, summary: '' };
+  if (s.awayWins === 0 && s.homeWins === 0) return { score: '', leader: null, summary: s.summary || '' };
   const aW = s.awayAbbr === a ? s.awayWins : s.homeWins;
   const bW = s.awayAbbr === b ? s.awayWins : s.homeWins;
   const score = `${aW}–${bW}`;
-  if (aW === bW) return { score, leader: 'tied' };
-  return { score, leader: aW > bW ? getOwner(a) : getOwner(b) };
+  if (aW === bW) return { score, leader: 'tied', summary: '' };
+  return { score, leader: aW > bW ? getOwner(a) : getOwner(b), summary: '' };
 }
 
 function buildRounds(conf, sm) {
@@ -992,6 +993,8 @@ function bMatchup(m) {
       gapHtml = `<span class="b-gap-leader" style="color:${col}">${m.leader} leads</span>
                  <span class="b-gap-score" style="color:${col}">${m.score}</span>`;
     }
+  } else if (m.summary) {
+    gapHtml = `<span class="b-gap-leader" style="color:var(--muted)">${m.summary}</span>`;
   }
   return `<div class="b-matchup">
     ${bSlot(m.t, m.ts, tW, m.winner && !tW)}
