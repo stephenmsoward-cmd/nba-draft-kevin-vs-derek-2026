@@ -294,6 +294,96 @@
       opacity: 0.4;
     }
 
+    /* Today's Games */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .game-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .game-card.live {
+      border-color: #22c55e44;
+      box-shadow: 0 0 0 1px #22c55e22;
+    }
+
+    .game-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .game-status-text {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .game-status-text.final  { color: var(--muted); }
+    .game-status-text.sched  { color: var(--muted); }
+
+    .game-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    .game-team-abbr {
+      font-size: 1rem;
+      font-weight: 800;
+      width: 38px;
+    }
+
+    .game-team-owner {
+      font-size: 0.68rem;
+      font-weight: 700;
+      flex: 1;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .game-score {
+      font-size: 1.1rem;
+      font-weight: 900;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    .game-score.winning { color: var(--text); }
+    .game-score.losing  { color: var(--muted); }
+    .game-score.tied    { color: var(--text); }
+
+    .no-games-msg {
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 20px 0;
+      grid-column: 1 / -1;
+    }
+
     @media (max-width: 560px) {
       .scoreboard {
         grid-template-columns: 1fr 1fr;
@@ -328,6 +418,14 @@
       <div class="player-count" id="derek-count">—</div>
       <div class="player-label">teams alive</div>
     </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Today's Games</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="games-grid" id="games-container">
+    <div class="no-games-msg">Loading…</div>
   </div>
 
   <div class="section-header">
@@ -541,6 +639,84 @@ function renderTeams(elim, inPlayoffs) {
   el.innerHTML = col('Kevin') + col('Derek');
 }
 
+// ── Live games ────────────────────────────────────────────────────────
+let liveRefreshTimer = null;
+
+async function fetchLiveGames() {
+  try {
+    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?seasontype=3');
+    const j = await r.json();
+    return j.events || [];
+  } catch { return []; }
+}
+
+function renderLiveGames(events) {
+  const el = document.getElementById('games-container');
+
+  if (!events.length) {
+    el.innerHTML = '<div class="no-games-msg">No games today.</div>';
+    return;
+  }
+
+  let anyLive = false;
+
+  el.innerHTML = events.map(ev => {
+    const comp = ev.competitions?.[0];
+    if (!comp) return '';
+
+    const status   = comp.status?.type;
+    const isLive   = status?.state === 'in';
+    const isFinal  = status?.state === 'post';
+    const detail   = status?.shortDetail || status?.detail || '';
+    if (isLive) anyLive = true;
+
+    const cs   = comp.competitors || [];
+    const away = cs.find(c => c.homeAway === 'away') || cs[0];
+    const home = cs.find(c => c.homeAway === 'home') || cs[1];
+
+    const awayAbbr  = norm(away?.team?.abbreviation);
+    const homeAbbr  = norm(home?.team?.abbreviation);
+    const awayScore = parseInt(away?.score) || 0;
+    const homeScore = parseInt(home?.score) || 0;
+    const awayOwner = getOwner(awayAbbr);
+    const homeOwner = getOwner(homeAbbr);
+
+    const awayWin = awayScore > homeScore;
+    const homeWin = homeScore > awayScore;
+
+    const statusCls  = isLive ? '' : isFinal ? 'final' : 'sched';
+    const statusLabel = isLive ? detail : isFinal ? `Final${detail ? ' · ' + detail : ''}` : detail;
+    const showScore  = isLive || isFinal;
+
+    return `
+      <div class="game-card ${isLive ? 'live' : ''}">
+        <div class="game-status-bar">
+          ${isLive ? '<div class="live-dot"></div>' : ''}
+          <span class="game-status-text ${statusCls}">${statusLabel}</span>
+        </div>
+        <div class="game-row">
+          <span class="game-team-abbr">${awayAbbr}</span>
+          <span class="game-team-owner ${ownerCls(awayOwner)}">${awayOwner || '—'}</span>
+          ${showScore ? `<span class="game-score ${awayWin ? 'winning' : homeWin ? 'losing' : 'tied'}">${awayScore}</span>` : ''}
+        </div>
+        <div class="game-row">
+          <span class="game-team-abbr">${homeAbbr}</span>
+          <span class="game-team-owner ${ownerCls(homeOwner)}">${homeOwner || '—'}</span>
+          ${showScore ? `<span class="game-score ${homeWin ? 'winning' : awayWin ? 'losing' : 'tied'}">${homeScore}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Auto-refresh every 30s while games are live
+  clearTimeout(liveRefreshTimer);
+  if (anyLive) {
+    liveRefreshTimer = setTimeout(async () => {
+      const fresh = await fetchLiveGames();
+      renderLiveGames(fresh);
+    }, 30000);
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────
 async function loadData() {
   const btn = document.getElementById('refresh-btn');
@@ -549,12 +725,13 @@ async function loadData() {
   document.getElementById('error-container').innerHTML = '';
 
   try {
-    const events   = await fetchAll();
+    const [events, liveEvents] = await Promise.all([fetchAll(), fetchLiveGames()]);
     const sm       = processEvents(events);
     const elim     = eliminated(sm);
     const inP      = playoffTeams(sm);
 
     renderScoreboard(elim, inP);
+    renderLiveGames(liveEvents);
     renderMatchups(sm, elim);
     renderTeams(elim, inP);
 
