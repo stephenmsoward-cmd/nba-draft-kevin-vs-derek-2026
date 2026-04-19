@@ -294,6 +294,139 @@
       opacity: 0.4;
     }
 
+    /* ── Bracket ── */
+    .bracket-outer { overflow-x: auto; margin-bottom: 40px; }
+
+    .bracket-wrap {
+      display: flex;
+      align-items: stretch;
+      height: 380px;
+      min-width: 700px;
+      gap: 0;
+    }
+
+    .conf-bracket { flex: 1; display: flex; gap: 0; }
+
+    .b-round {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      overflow: visible;
+      position: relative;
+    }
+
+    .b-matchup {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Slot */
+    .b-slot {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 7px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      position: relative;
+      z-index: 1;
+      white-space: nowrap;
+    }
+
+    .b-slot.b-winner { border-color: rgba(34,197,94,0.55); background: rgba(34,197,94,0.07); }
+    .b-slot.b-elim   { opacity: 0.22; }
+    .b-slot.b-tbd    { border-style: dashed; color: var(--muted); justify-content: center; font-size: 0.68rem; }
+
+    .b-seed  { font-size: 0.58rem; color: var(--muted); font-weight: 700; min-width: 10px; }
+    .b-abbr  { font-weight: 800; font-size: 0.8rem; }
+    .b-otag  { font-size: 0.6rem; font-weight: 700; margin-left: auto; }
+
+    /* Gap between slots (shows series score) */
+    .b-gap {
+      height: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .b-gap-score {
+      font-size: 0.6rem;
+      color: var(--muted);
+      font-weight: 700;
+      background: var(--bg);
+      padding: 0 3px;
+      z-index: 2;
+      position: relative;
+    }
+
+    /* Connector lines — East: right side  (top: 14=center of top slot, height: 42=to center of bottom, mid: 35) */
+    .east-round .b-matchup::before {
+      content: ''; position: absolute;
+      right: 0; top: 14px; height: 42px; width: 1px;
+      background: var(--border);
+    }
+    .east-round .b-matchup::after {
+      content: ''; position: absolute;
+      right: -7px; top: 35px; height: 1px; width: 7px;
+      background: var(--border);
+    }
+
+    /* Connector lines — West: left side */
+    .west-round .b-matchup::before {
+      content: ''; position: absolute;
+      left: 0; top: 14px; height: 42px; width: 1px;
+      background: var(--border);
+    }
+    .west-round .b-matchup::after {
+      content: ''; position: absolute;
+      left: -7px; top: 35px; height: 1px; width: 7px;
+      background: var(--border);
+    }
+
+    /* Finals column */
+    .finals-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 130px;
+      padding: 0 8px;
+      gap: 8px;
+    }
+
+    .finals-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+
+    /* Conference name labels */
+    .bracket-conf-labels {
+      display: flex;
+      min-width: 700px;
+      margin-bottom: 6px;
+    }
+    .bcl-conf { flex: 1; display: flex; }
+    .bcl-cell {
+      flex: 1;
+      text-align: center;
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .bcl-finals { min-width: 130px; }
+
     /* Today's Games */
     .games-grid {
       display: grid;
@@ -417,6 +550,29 @@
       <div class="player-name">Derek</div>
       <div class="player-count" id="derek-count">—</div>
       <div class="player-label">teams alive</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Playoff Bracket</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="bracket-outer">
+    <div class="bracket-conf-labels">
+      <div class="bcl-conf">
+        <div class="bcl-cell">1st Rd</div>
+        <div class="bcl-cell">Semis</div>
+        <div class="bcl-cell">East Finals</div>
+      </div>
+      <div class="bcl-finals"></div>
+      <div class="bcl-conf">
+        <div class="bcl-cell">West Finals</div>
+        <div class="bcl-cell">Semis</div>
+        <div class="bcl-cell">1st Rd</div>
+      </div>
+    </div>
+    <div id="bracket-container">
+      <div class="loading-msg" style="min-width:700px">Loading bracket…</div>
     </div>
   </div>
 
@@ -654,6 +810,107 @@ function renderTeams(elim, inPlayoffs) {
   el.innerHTML = col('Kevin') + col('Derek');
 }
 
+// ── Bracket ───────────────────────────────────────────────────────────
+const CONF_BRACKET = {
+  East: [
+    {t:'DET',ts:1, b:'ORL',bs:8},
+    {t:'BOS',ts:2, b:'PHI',bs:7},
+    {t:'NYK',ts:3, b:'ATL',bs:6},
+    {t:'CLE',ts:4, b:'TOR',bs:5},
+  ],
+  West: [
+    {t:'OKC',ts:1, b:'PHX',bs:8},
+    {t:'SAS',ts:2, b:'POR',bs:7},
+    {t:'DEN',ts:3, b:'MIN',bs:6},
+    {t:'LAL',ts:4, b:'HOU',bs:5},
+  ],
+};
+// NBA fixed bracket: 1/8 winner vs 4/5 winner; 2/7 winner vs 3/6 winner
+const R2_PAIRS = [[0,3],[1,2]];
+
+function bracketWinner(a, b, sm) {
+  if (!a || !b) return null;
+  const s = sm.get([a,b].sort().join('_'));
+  if (!s) return null;
+  if (s.awayWins >= 4) return s.awayAbbr;
+  if (s.homeWins >= 4) return s.homeAbbr;
+  return null;
+}
+
+function bracketScore(a, b, sm) {
+  if (!a || !b) return '';
+  const s = sm.get([a,b].sort().join('_'));
+  if (!s || (s.awayWins === 0 && s.homeWins === 0)) return '';
+  const aW = s.awayAbbr === a ? s.awayWins : s.homeWins;
+  const bW = s.awayAbbr === b ? s.awayWins : s.homeWins;
+  return `${aW}–${bW}`;
+}
+
+function buildRounds(conf, sm) {
+  const r1 = CONF_BRACKET[conf];
+  const w1 = r1.map(m => bracketWinner(m.t, m.b, sm));
+  const r2 = R2_PAIRS.map(([i,j]) => ({t:w1[i], ts:null, b:w1[j], bs:null}));
+  const w2 = r2.map(m => bracketWinner(m.t, m.b, sm));
+  const r3 = [{t:w2[0], ts:null, b:w2[1], bs:null}];
+  const w3 = r3.map(m => bracketWinner(m.t, m.b, sm));
+  return {
+    r1: r1.map((m,i) => ({...m, winner:w1[i], score:bracketScore(m.t,m.b,sm)})),
+    r2: r2.map((m,i) => ({...m, winner:w2[i], score:bracketScore(m.t,m.b,sm)})),
+    r3: r3.map((m,i) => ({...m, winner:w3[i], score:bracketScore(m.t,m.b,sm)})),
+    confWinner: w3[0],
+  };
+}
+
+function bSlot(abbr, seed, isWin, isElim) {
+  if (abbr === null || abbr === undefined)
+    return `<div class="b-slot b-tbd">TBD</div>`;
+  const o = getOwner(abbr);
+  const cls = isWin ? 'b-winner' : isElim ? 'b-elim' : '';
+  return `<div class="b-slot ${cls}">
+    ${seed ? `<span class="b-seed">${seed}</span>` : ''}
+    <span class="b-abbr">${abbr}</span>
+    <span class="b-otag ${ownerCls(o)}">${o||''}</span>
+  </div>`;
+}
+
+function bMatchup(m) {
+  const tW = m.winner === m.t, bW = m.winner === m.b;
+  return `<div class="b-matchup">
+    ${bSlot(m.t, m.ts, tW, m.winner && !tW)}
+    <div class="b-gap"><span class="b-gap-score">${m.score||''}</span></div>
+    ${bSlot(m.b, m.bs, bW, m.winner && !bW)}
+  </div>`;
+}
+
+function renderBracket(sm) {
+  const E = buildRounds('East', sm);
+  const W = buildRounds('West', sm);
+  const finals = {
+    t: E.confWinner, ts: null,
+    b: W.confWinner, bs: null,
+    winner: bracketWinner(E.confWinner, W.confWinner, sm),
+    score:  bracketScore(E.confWinner, W.confWinner, sm),
+  };
+
+  document.getElementById('bracket-container').innerHTML = `
+    <div class="bracket-wrap">
+      <div class="conf-bracket">
+        <div class="b-round east-round">${E.r1.map(bMatchup).join('')}</div>
+        <div class="b-round east-round">${E.r2.map(bMatchup).join('')}</div>
+        <div class="b-round">${E.r3.map(bMatchup).join('')}</div>
+      </div>
+      <div class="finals-col">
+        <div class="finals-title">🏆 NBA Finals</div>
+        ${bMatchup(finals)}
+      </div>
+      <div class="conf-bracket">
+        <div class="b-round">${W.r3.map(bMatchup).join('')}</div>
+        <div class="b-round west-round">${W.r2.map(bMatchup).join('')}</div>
+        <div class="b-round west-round">${W.r1.map(bMatchup).join('')}</div>
+      </div>
+    </div>`;
+}
+
 // ── Live games ────────────────────────────────────────────────────────
 let liveRefreshTimer = null;
 
@@ -746,6 +1003,7 @@ async function loadData() {
     const inP      = playoffTeams(sm);
 
     renderScoreboard(elim, inP);
+    renderBracket(sm);
     renderLiveGames(liveEvents);
     renderMatchups(sm, elim);
     renderTeams(elim, inP);
