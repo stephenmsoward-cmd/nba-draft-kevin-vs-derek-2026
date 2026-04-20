@@ -1,6 +1,7 @@
 {
-  "ts": 1776716453391,
-  "updatedAt": "2026-04-20T20:20:53.391099+00:00",
+  "ts": 1776716672875,
+  "updatedAt": "2026-04-20T20:24:32.875279+00:00",
+  "source": "the-odds-api-fallback",
   "probs": {
     "Oklahoma City Thunder": 0.5139715429912456,
     "Boston Celtics": 0.14938186813186813,
@@ -13,7 +14,7 @@
     "Houston Rockets": 0.03993450163827992,
     "Minnesota Timberwolves": 0.0107526776721894,
     "Atlanta Hawks": 0.00685867573129373,
-    "Orlando Magic": 0.10163869403835481,
+    "Orlando Magic": 0.10161501155415693,
     "Philadelphia 76ers": 0.006888440245157156,
     "Toronto Raptors": 0.1997829186902959,
     "Phoenix Suns": 0.22955010537797732,
