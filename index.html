@@ -1513,55 +1513,29 @@ function oddsToImpliedProb(line) {
   return n > 0 ? 100 / (n + 100) : Math.abs(n) / (Math.abs(n) + 100);
 }
 
-// Known sport key for NBA championship futures on The Odds API
-const ODDS_SPORT_KEY = 'basketball_nba_championship_winner';
-
-async function fetchOddsFromEndpoint(path, params) {
-  const qs = new URLSearchParams({ apiKey: ODDS_API_KEY, regions: 'us,uk,eu,au', oddsFormat: 'american', ...params }).toString();
-  const url = `https://api.the-odds-api.com/v4/sports/${ODDS_SPORT_KEY}/${path}?${qs}`;
-  console.log('[Odds] GET', path, params);
-  const r = await fetch(url);
-  console.log('[Odds] →', r.status, path);
-  if (!r.ok) return null;
-  const data = await r.json();
-  return Array.isArray(data) && data.length ? data : null;
-}
-
-function parseOddsEvents(events) {
-  const totals = {}, counts = {};
-  for (const ev of events) {
-    for (const book of ev.bookmakers || []) {
-      for (const market of book.markets || []) {
-        for (const outcome of market.outcomes || []) {
-          const abbr = nameToAbbr(outcome.name);
-          if (!abbr) continue;
-          const price = Number(outcome.price);
-          if (!price) continue;
-          const p = price > 0 ? 100/(price+100) : Math.abs(price)/(Math.abs(price)+100);
-          totals[abbr] = (totals[abbr] || 0) + p;
-          counts[abbr] = (counts[abbr] || 0) + 1;
-        }
-      }
-    }
-  }
-  console.log('[Odds] Teams parsed:', Object.keys(totals));
-  if (Object.keys(totals).length < 4) return null;
-  const probs = {};
-  for (const [abbr, total] of Object.entries(totals)) probs[abbr] = total / counts[abbr];
-  return probs;
-}
-
+// Odds are updated nightly by a GitHub Action that writes data/odds.json.
+// The page reads from that file (same-origin, no CORS issues, always current).
 async function fetchChampionshipOdds() {
   try {
-    // Try 1: outrights endpoint (canonical futures endpoint)
-    let events = await fetchOddsFromEndpoint('outrights', {});
-    // Try 2: odds endpoint with outrights market (alternative format some sports use)
-    if (!events) events = await fetchOddsFromEndpoint('odds', { markets: 'outrights' });
-    // Try 3: odds endpoint with h2h (fallback — unlikely to have team winner odds but worth a shot)
-    if (!events) { console.warn('[Odds] No data from any endpoint — market may be unavailable'); return null; }
-    return parseOddsEvents(events);
+    // Cache-bust with a daily key so we get fresh data after the nightly Action runs
+    const day = new Date().toISOString().slice(0, 10);
+    const r = await fetch(`data/odds.json?d=${day}`);
+    if (!r.ok) { console.warn('[Odds] data/odds.json status:', r.status); return null; }
+    const data = await r.json();
+    // data.probs is { "Oklahoma City Thunder": 0.42, ... } — full team names from API
+    const rawProbs = data.probs || {};
+    if (!Object.keys(rawProbs).length) { console.warn('[Odds] Empty probs in odds.json'); return null; }
+
+    // Convert full team names → abbreviations
+    const probs = {};
+    for (const [name, p] of Object.entries(rawProbs)) {
+      const abbr = nameToAbbr(name);
+      if (abbr) probs[abbr] = p;
+    }
+    console.log('[Odds] Loaded from odds.json (updated', data.updatedAt, '):', Object.keys(probs));
+    return Object.keys(probs).length >= 4 ? probs : null;
   } catch(e) {
-    console.warn('[Odds] Fetch failed:', e);
+    console.warn('[Odds] Failed to load odds.json:', e);
     return null;
   }
 }

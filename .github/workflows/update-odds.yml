@@ -1,0 +1,115 @@
+name: Update Championship Odds
+
+on:
+  schedule:
+    # Run at 1 AM, 2 AM, and 3 AM ET (5, 6, 7 AM UTC) to catch late West Coast games
+    - cron: '0 5 * * *'
+    - cron: '0 6 * * *'
+    - cron: '0 7 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  update-odds:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch NBA championship odds from The Odds API
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          echo "Fetching sports list..."
+          SPORTS=$(curl -sf "https://api.the-odds-api.com/v4/sports?apiKey=${ODDS_API_KEY}" || echo "[]")
+
+          # Find basketball sport keys with outrights
+          SPORT_KEY=$(echo "$SPORTS" | python3 -c "
+          import sys, json
+          sports = json.load(sys.stdin)
+          keys = [s['key'] for s in sports if 'basketball' in (s.get('group') or '').lower() and s.get('has_outrights')]
+          print(keys[0] if keys else '')
+          " 2>/dev/null || echo "basketball_nba_championship_winner")
+
+          echo "Sport key: $SPORT_KEY"
+
+          if [ -z "$SPORT_KEY" ]; then
+            echo "No basketball outright sport found, using default"
+            SPORT_KEY="basketball_nba_championship_winner"
+          fi
+
+          # Try outrights endpoint, then odds?markets=outrights
+          ODDS=$(curl -sf "https://api.the-odds-api.com/v4/sports/${SPORT_KEY}/outrights?apiKey=${ODDS_API_KEY}&regions=us,uk,eu,au&oddsFormat=american" || echo "[]")
+
+          COUNT=$(echo "$ODDS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d))" 2>/dev/null || echo "0")
+          echo "Outrights events: $COUNT"
+
+          if [ "$COUNT" = "0" ]; then
+            echo "Trying odds endpoint..."
+            ODDS=$(curl -sf "https://api.the-odds-api.com/v4/sports/${SPORT_KEY}/odds?apiKey=${ODDS_API_KEY}&regions=us,uk,eu,au&markets=outrights&oddsFormat=american" || echo "[]")
+          fi
+
+          # Parse into team->avg_implied_prob map
+          python3 << 'PYEOF'
+          import sys, json, os
+
+          with open('/tmp/odds_raw.json', 'w') as f:
+              f.write(os.environ.get('ODDS_DATA', '[]'))
+          PYEOF
+
+          echo "$ODDS" > /tmp/odds_raw.json
+
+          python3 << 'PYEOF'
+          import json, math
+          from datetime import datetime, timezone
+
+          with open('/tmp/odds_raw.json') as f:
+              events = json.load(f)
+
+          totals = {}
+          counts = {}
+          for ev in events:
+              for book in ev.get('bookmakers', []):
+                  for market in book.get('markets', []):
+                      for outcome in market.get('outcomes', []):
+                          name = outcome.get('name', '')
+                          price = float(outcome.get('price', 0))
+                          if not price:
+                              continue
+                          if price > 0:
+                              p = 100 / (price + 100)
+                          else:
+                              p = abs(price) / (abs(price) + 100)
+                          totals[name] = totals.get(name, 0) + p
+                          counts[name] = counts.get(name, 0) + 1
+
+          probs = {}
+          for name, total in totals.items():
+              probs[name] = total / counts[name]
+
+          output = {
+              'ts': int(datetime.now(timezone.utc).timestamp() * 1000),
+              'updatedAt': datetime.now(timezone.utc).isoformat(),
+              'probs': probs,
+          }
+
+          with open('data/odds.json', 'w') as f:
+              json.dump(output, f, indent=2)
+
+          print(f"Wrote {len(probs)} teams to data/odds.json")
+          for name, p in sorted(probs.items(), key=lambda x: -x[1])[:10]:
+              print(f"  {name}: {p:.3f}")
+          PYEOF
+
+      - name: Commit updated odds
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/odds.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update championship odds [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git push
+          fi
