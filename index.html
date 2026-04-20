@@ -1336,7 +1336,7 @@ async function renderLiveGames(events, sm) {
     const statusLabel = detail || (isFinal ? 'Final' : '');
     const showScore   = isLive || isFinal;
 
-    const ctx = showScore ? getSeriesContext(awayAbbr, homeAbbr, sm) : null;
+    const ctx = getSeriesContext(awayAbbr, homeAbbr, sm);
     const ctxColor = ctx?.owner === 'Kevin' ? 'var(--kevin)' : ctx?.owner === 'Derek' ? 'var(--derek)' : 'var(--muted)';
 
     return `
