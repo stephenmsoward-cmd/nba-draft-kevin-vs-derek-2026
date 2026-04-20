@@ -607,6 +607,16 @@
       grid-column: 1 / -1;
     }
 
+    .game-series-ctx {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-align: center;
+      margin-top: 9px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      letter-spacing: 0.02em;
+    }
+
     /* Conference name labels in bracket */
     .bracket-conf-names {
       display: flex;
@@ -1216,8 +1226,38 @@ function renderBracket(sm) {
     </div>`;
 }
 
+// ── Series context helper (for game cards) ────────────────────────────
+function getSeriesContext(awayAbbr, homeAbbr, sm) {
+  if (!sm) return null;
+  const key = [awayAbbr, homeAbbr].sort().join('_');
+  const s = sm.get(key);
+  if (!s || (s.awayWins === 0 && s.homeWins === 0)) return null;
+
+  const aw = s.awayWins, hw = s.homeWins;
+  const total = aw + hw;
+  const gameLabel = s.completed ? `Won in ${total}` : `Gm ${total + 1}`;
+
+  let owner, text;
+  if (s.completed) {
+    owner = aw >= 4 ? getOwner(s.awayAbbr) : getOwner(s.homeAbbr);
+    const w = aw >= 4 ? aw : hw, l = aw >= 4 ? hw : aw;
+    text = `${owner === 'Kevin' ? 'K' : 'D'} wins ${w}–${l} · ${gameLabel}`;
+  } else if (aw > hw) {
+    owner = getOwner(s.awayAbbr);
+    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${aw}–${hw} · ${gameLabel}`;
+  } else if (hw > aw) {
+    owner = getOwner(s.homeAbbr);
+    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${hw}–${aw} · ${gameLabel}`;
+  } else {
+    owner = null;
+    text = `Tied ${aw}–${hw} · ${gameLabel}`;
+  }
+  return { text, owner };
+}
+
 // ── Live games ────────────────────────────────────────────────────────
 let liveRefreshTimer = null;
+let cachedHistoricalEvents = [];
 
 async function findNextGameDate() {
   for (let i = 1; i <= 8; i++) {
@@ -1240,7 +1280,7 @@ async function fetchLiveGames() {
   } catch { return []; }
 }
 
-async function renderLiveGames(events) {
+async function renderLiveGames(events, sm) {
   const el = document.getElementById('games-container');
 
   if (!events.length) {
@@ -1278,9 +1318,12 @@ async function renderLiveGames(events) {
     const awayWin = awayScore > homeScore;
     const homeWin = homeScore > awayScore;
 
-    const statusCls  = isLive ? '' : isFinal ? 'final' : 'sched';
+    const statusCls   = isLive ? '' : isFinal ? 'final' : 'sched';
     const statusLabel = isLive ? detail : isFinal ? `Final${detail ? ' · ' + detail : ''}` : detail;
-    const showScore  = isLive || isFinal;
+    const showScore   = isLive || isFinal;
+
+    const ctx = showScore ? getSeriesContext(awayAbbr, homeAbbr, sm) : null;
+    const ctxColor = ctx?.owner === 'Kevin' ? 'var(--kevin)' : ctx?.owner === 'Derek' ? 'var(--derek)' : 'var(--muted)';
 
     return `
       <div class="game-card ${isLive ? 'live' : ''}">
@@ -1298,6 +1341,7 @@ async function renderLiveGames(events) {
           <span class="game-team-owner ${ownerCls(homeOwner)}">${homeOwner || '—'}</span>
           ${showScore ? `<span class="game-score ${homeWin ? 'winning' : awayWin ? 'losing' : 'tied'}">${homeScore}</span>` : ''}
         </div>
+        ${ctx ? `<div class="game-series-ctx" style="color:${ctxColor}">${ctx.text}</div>` : ''}
       </div>`;
   }).join('');
 
@@ -1306,7 +1350,9 @@ async function renderLiveGames(events) {
   if (anyLive) {
     liveRefreshTimer = setTimeout(async () => {
       const fresh = await fetchLiveGames();
-      await renderLiveGames(fresh);
+      // Merge fresh live events with historical so series wins stay current
+      const updatedSm = processEvents([...cachedHistoricalEvents, ...fresh]);
+      await renderLiveGames(fresh, updatedSm);
     }, 30000);
   }
 }
@@ -1320,13 +1366,15 @@ async function loadData() {
 
   try {
     const [events, liveEvents] = await Promise.all([fetchAll(), fetchLiveGames()]);
-    const sm       = processEvents(events);
+    cachedHistoricalEvents = events;
+    // Merge live events so series wins reflect completed games today
+    const sm       = processEvents([...events, ...liveEvents]);
     const elim     = eliminated(sm);
     const inP      = playoffTeams(sm);
 
     renderScoreboard(elim, inP, sm);
     renderBracket(sm);
-    await renderLiveGames(liveEvents);
+    await renderLiveGames(liveEvents, sm);
     renderMatchups(sm, elim);
     renderTeams(elim, inP);
 
