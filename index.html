@@ -1613,7 +1613,15 @@ function renderSideBet(result, cached = false, cachedTs = null) {
           <div class="sb-sub">backing Derek's teams</div>
         </div>
       </div>
-      <div style="font-size:0.62rem;color:var(--muted);margin-bottom:10px;${cached ? 'opacity:0.7' : ''}">${tsLabel}</div>
+      <div style="font-size:0.62rem;color:var(--muted);margin-bottom:10px;${cached ? 'opacity:0.7' : ''}">
+        ${tsLabel}
+        <span class="ff-tooltip">
+          <span class="ff-ques">?</span>
+          <span class="ff-tooltip-text" style="width:260px;left:auto;right:0;transform:none;">
+            Sportsbook odds carry built-in margin (they sum to &gt;100%). We normalize all alive teams to sum to exactly 100%, then Kevin's teams' probabilities add up to Stephen's %, and Derek's add up to Nathaniel's.
+          </span>
+        </span>
+      </div>
       <div class="sb-bar">
         <div class="sb-fill-k" style="width:${kPct}%"></div>
         <div class="sb-fill-d" style="width:${dPct}%"></div>
