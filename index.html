@@ -1284,10 +1284,13 @@ async function findNextGameDate() {
 
 async function fetchLiveGames() {
   try {
-    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?seasontype=3');
+    // Use ET date — avoids UTC midnight rollover showing wrong day
+    const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).replace(/-/g,'');
+    const r = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${todayET}&seasontype=3`
+    );
     const j = await r.json();
-    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
-    return (j.events || []).map(e => ({ ...e, _date: today }));
+    return (j.events || []).map(e => ({ ...e, _date: todayET }));
   } catch { return []; }
 }
 
