@@ -17,89 +17,185 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch NBA championship odds from The Odds API
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      - name: Install Python dependencies
+        run: pip install playwright requests && playwright install chromium --with-deps
+
+      - name: Scrape DraftKings championship odds
         run: |
-          echo "Fetching sports list..."
-          SPORTS=$(curl -sf "https://api.the-odds-api.com/v4/sports?apiKey=${ODDS_API_KEY}" || echo "[]")
-
-          # Find basketball sport keys with outrights
-          SPORT_KEY=$(echo "$SPORTS" | python3 -c "
-          import sys, json
-          sports = json.load(sys.stdin)
-          keys = [s['key'] for s in sports if 'basketball' in (s.get('group') or '').lower() and s.get('has_outrights')]
-          print(keys[0] if keys else '')
-          " 2>/dev/null || echo "basketball_nba_championship_winner")
-
-          echo "Sport key: $SPORT_KEY"
-
-          if [ -z "$SPORT_KEY" ]; then
-            echo "No basketball outright sport found, using default"
-            SPORT_KEY="basketball_nba_championship_winner"
-          fi
-
-          # Try outrights endpoint, then odds?markets=outrights
-          ODDS=$(curl -sf "https://api.the-odds-api.com/v4/sports/${SPORT_KEY}/outrights?apiKey=${ODDS_API_KEY}&regions=us,uk,eu,au&oddsFormat=american" || echo "[]")
-
-          COUNT=$(echo "$ODDS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d))" 2>/dev/null || echo "0")
-          echo "Outrights events: $COUNT"
-
-          if [ "$COUNT" = "0" ]; then
-            echo "Trying odds endpoint..."
-            ODDS=$(curl -sf "https://api.the-odds-api.com/v4/sports/${SPORT_KEY}/odds?apiKey=${ODDS_API_KEY}&regions=us,uk,eu,au&markets=outrights&oddsFormat=american" || echo "[]")
-          fi
-
-          # Parse into team->avg_implied_prob map
           python3 << 'PYEOF'
-          import sys, json, os
-
-          with open('/tmp/odds_raw.json', 'w') as f:
-              f.write(os.environ.get('ODDS_DATA', '[]'))
-          PYEOF
-
-          echo "$ODDS" > /tmp/odds_raw.json
-
-          python3 << 'PYEOF'
-          import json, math
+          import json, sys, time
           from datetime import datetime, timezone
+          from playwright.sync_api import sync_playwright
 
-          with open('/tmp/odds_raw.json') as f:
-              events = json.load(f)
+          TARGET_URL = 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=team-futures&subcategory=champion'
 
-          totals = {}
-          counts = {}
-          for ev in events:
-              for book in ev.get('bookmakers', []):
-                  for market in book.get('markets', []):
-                      for outcome in market.get('outcomes', []):
-                          name = outcome.get('name', '')
-                          price = float(outcome.get('price', 0))
-                          if not price:
-                              continue
-                          if price > 0:
-                              p = 100 / (price + 100)
-                          else:
-                              p = abs(price) / (abs(price) + 100)
-                          totals[name] = totals.get(name, 0) + p
-                          counts[name] = counts.get(name, 0) + 1
+          captured = []
+
+          def on_response(response):
+              url = response.url
+              # Capture any eventgroups API call that returns JSON
+              if 'eventgroups' in url and response.status == 200:
+                  try:
+                      data = response.json()
+                      captured.append((url, data))
+                      print(f'[DK] Captured: {url[:100]}', flush=True)
+                  except Exception as e:
+                      pass
 
           probs = {}
-          for name, total in totals.items():
-              probs[name] = total / counts[name]
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              ctx = browser.new_context(
+                  user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                  locale='en-US',
+                  extra_http_headers={
+                      'Accept-Language': 'en-US,en;q=0.9',
+                  }
+              )
+              page = ctx.new_page()
+              page.on('response', on_response)
+
+              print(f'[DK] Navigating to {TARGET_URL}', flush=True)
+              try:
+                  page.goto(TARGET_URL, wait_until='networkidle', timeout=30000)
+              except Exception as e:
+                  print(f'[DK] Navigation warning: {e}', flush=True)
+
+              time.sleep(3)
+
+              print(f'[DK] Captured {len(captured)} API responses', flush=True)
+
+              # Parse DraftKings event group responses for futures/outrights
+              for url, data in captured:
+                  # DK wraps data in eventGroup or eventGroups
+                  eg = data.get('eventGroup') or {}
+                  if not eg:
+                      egs = data.get('eventGroups', [])
+                      eg = egs[0] if egs else {}
+
+                  # Iterate offer categories → subcategories → offers
+                  for cat in eg.get('offerCategories', []):
+                      for subcat in cat.get('offerSubcategoryDescriptors', []):
+                          subcat_name = (subcat.get('name') or '').lower()
+                          if 'champion' not in subcat_name and 'winner' not in subcat_name:
+                              continue
+                          for offer in subcat.get('offerSubcategory', {}).get('offers', []):
+                              for outcome_list in offer if isinstance(offer, list) else [offer]:
+                                  outcomes = outcome_list if isinstance(outcome_list, list) else outcome_list.get('outcomes', [])
+                                  for o in outcomes:
+                                      label = o.get('label') or o.get('participant') or ''
+                                      odds_american = o.get('oddsAmerican') or o.get('odds') or ''
+                                      if not label or not odds_american:
+                                          continue
+                                      try:
+                                          price = int(str(odds_american).replace('+',''))
+                                      except:
+                                          continue
+                                      p = 100/(price+100) if price > 0 else abs(price)/(abs(price)+100)
+                                      probs[label] = probs.get(label, 0) + p
+                                      print(f'  {label}: {odds_american} → {p:.3f}', flush=True)
+
+              browser.close()
+
+          if len(probs) < 4:
+              print('[DK] Not enough teams parsed, trying direct API calls...', flush=True)
+              import requests as req
+              headers = {
+                  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
+                  'Accept': 'application/json',
+                  'Origin': 'https://sportsbook.draftkings.com',
+                  'Referer': 'https://sportsbook.draftkings.com/leagues/basketball/nba?category=team-futures&subcategory=champion',
+              }
+              # Try known DraftKings event group IDs for NBA futures
+              for eid in ['42648', '42801', '92648']:
+                  for cat in ['587', '1000']:
+                      for sub in ['4980', '5001', '4981']:
+                          url = f'https://sportsbook-nash.draftkings.com/sites/US-SB/api/v5/eventgroups/{eid}/categories/{cat}/subcategories/{sub}'
+                          try:
+                              r = req.get(url, headers=headers, timeout=8)
+                              print(f'[DK] {url[-60:]}: {r.status_code}', flush=True)
+                              if r.status_code == 200:
+                                  d = r.json()
+                                  print(f'[DK] Keys: {list(d.keys())}', flush=True)
+                          except Exception as e:
+                              print(f'[DK] Error: {e}', flush=True)
+
+          print(f'\n[Result] Teams found: {list(probs.keys())}', flush=True)
 
           output = {
               'ts': int(datetime.now(timezone.utc).timestamp() * 1000),
               'updatedAt': datetime.now(timezone.utc).isoformat(),
+              'source': 'draftkings',
               'probs': probs,
           }
 
           with open('data/odds.json', 'w') as f:
               json.dump(output, f, indent=2)
 
-          print(f"Wrote {len(probs)} teams to data/odds.json")
-          for name, p in sorted(probs.items(), key=lambda x: -x[1])[:10]:
-              print(f"  {name}: {p:.3f}")
+          print(f'Wrote {len(probs)} teams to data/odds.json')
+          PYEOF
+
+      - name: Fallback to The Odds API if DraftKings scrape failed
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os
+          from datetime import datetime, timezone
+
+          with open('data/odds.json') as f:
+              current = json.load(f)
+
+          if len(current.get('probs', {})) >= 4:
+              print(f"DraftKings data has {len(current['probs'])} teams — skipping fallback")
+              exit(0)
+
+          print("DraftKings failed, falling back to The Odds API...")
+          import requests
+
+          key = os.environ['ODDS_API_KEY']
+
+          # Find the right sport key
+          sports = requests.get(f'https://api.the-odds-api.com/v4/sports?apiKey={key}').json()
+          bball = [s['key'] for s in sports if 'basketball' in (s.get('group') or '').lower() and s.get('has_outrights')]
+          sport_key = bball[0] if bball else 'basketball_nba_championship_winner'
+          print(f"Sport key: {sport_key}")
+
+          probs = {}
+          for path in [f'sports/{sport_key}/outrights', f'sports/{sport_key}/odds?markets=outrights']:
+              url = f'https://api.the-odds-api.com/v4/{path}&apiKey={key}&regions=us,uk,eu,au&oddsFormat=american'
+              if '?' not in path:
+                  url = url.replace(f'{path}&', f'{path}?')
+              r = requests.get(url)
+              print(f'{path}: {r.status_code}')
+              if r.status_code != 200:
+                  continue
+              events = r.json()
+              totals, counts = {}, {}
+              for ev in events:
+                  for book in ev.get('bookmakers', []):
+                      for market in book.get('markets', []):
+                          for outcome in market.get('outcomes', []):
+                              name = outcome.get('name', '')
+                              price = float(outcome.get('price', 0))
+                              if not price: continue
+                              p = 100/(price+100) if price > 0 else abs(price)/(abs(price)+100)
+                              totals[name] = totals.get(name, 0) + p
+                              counts[name] = counts.get(name, 0) + 1
+              probs = {n: totals[n]/counts[n] for n in totals}
+              if len(probs) >= 4:
+                  break
+
+          output = {
+              'ts': int(datetime.now(timezone.utc).timestamp() * 1000),
+              'updatedAt': datetime.now(timezone.utc).isoformat(),
+              'source': 'the-odds-api-fallback',
+              'probs': probs,
+          }
+          with open('data/odds.json', 'w') as f:
+              json.dump(output, f, indent=2)
+          print(f'Wrote {len(probs)} teams from fallback')
           PYEOF
 
       - name: Commit updated odds
