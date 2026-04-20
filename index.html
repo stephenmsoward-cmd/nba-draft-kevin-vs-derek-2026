@@ -337,8 +337,8 @@
     .bracket-wrap {
       display: flex;
       align-items: stretch;
-      height: 420px;
-      min-width: 700px;
+      height: 460px;
+      min-width: 900px;
       gap: 0;
     }
 
@@ -359,78 +359,74 @@
       position: relative;
     }
 
-    /* Slot */
+    /* Slot — background/border/radius now on .b-card */
     .b-slot {
       height: 32px;
       display: flex;
       align-items: center;
       gap: 5px;
       padding: 0 9px;
+      font-size: 0.75rem;
+      position: relative;
+      white-space: nowrap;
+    }
+
+    /* Card wraps both slots */
+    .b-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 0.75rem;
-      position: relative;
-      z-index: 1;
-      white-space: nowrap;
+      overflow: hidden;
     }
+    .b-card.b-card-done { border-color: rgba(34,197,94,0.4); }
 
-    .b-slot.b-winner { border-color: rgba(34,197,94,0.55); background: rgba(34,197,94,0.07); }
+    .b-slot.b-winner { background: rgba(34,197,94,0.08); }
     .b-slot.b-elim   { opacity: 0.22; }
-    .b-slot.b-tbd    {
-      border-style: dashed;
-      color: var(--muted);
-      justify-content: center;
-      font-size: 0.7rem;
-      letter-spacing: 0.06em;
-      opacity: 0.5;
-    }
+    .b-slot + .b-slot { border-top: 1px solid var(--border); }
+    .b-slot.b-tbd    { color: var(--muted); justify-content: center; font-size: 0.7rem; opacity: 0.45; }
 
-    .b-seed  { font-size: 0.6rem; color: var(--muted); font-weight: 700; min-width: 10px; }
-    .b-abbr  { font-weight: 800; font-size: 0.82rem; }
-    .b-otag  { font-size: 0.65rem; font-weight: 800; margin-left: auto; }
+    .b-seed  { font-size: 0.6rem; color: var(--muted); font-weight: 700; min-width: 10px; flex-shrink: 0; }
+    .b-abbr  { font-weight: 800; font-size: 0.82rem; flex-shrink: 0; }
+    .b-name  { font-size: 0.62rem; color: var(--muted); font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+    .b-otag  { font-size: 0.65rem; font-weight: 800; flex-shrink: 0; }
 
-    /* Gap between slots (shows series info on one line) */
-    .b-gap {
-      height: 24px;
+    /* Series info label sits above each matchup card */
+    .b-series-info {
+      min-height: 18px;
+      margin-bottom: 4px;
+      font-size: 0.63rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       display: flex;
       align-items: center;
-      justify-content: center;
-      position: relative;
     }
 
-    .b-gap-line {
-      font-size: 0.67rem;
-      font-weight: 700;
-      background: var(--bg);
-      padding: 0 4px;
-      z-index: 2;
-      position: relative;
-      white-space: nowrap;
-    }
-
-    /* Connector lines — East: right side (slot=32px, gap=24px → total=88px)
-       top slot center: 16px, bottom slot center: 72px, midpoint: 44px */
+    /* Connector lines — East: right side
+       series-info: 18px + 4px margin = 22px; card border: 1px; slot: 32px; divider: 1px
+       top slot center:  22 + 1 + 16 = 39px
+       bottom slot center: 22 + 1 + 32 + 1 + 16 = 72px  midpoint: 56px  height: 33px */
     .east-round .b-matchup::before {
       content: ''; position: absolute;
-      right: 0; top: 16px; height: 56px; width: 1px;
+      right: 0; top: 39px; height: 33px; width: 1px;
       background: var(--border);
     }
     .east-round .b-matchup::after {
       content: ''; position: absolute;
-      right: -7px; top: 44px; height: 1px; width: 7px;
+      right: -7px; top: 56px; height: 1px; width: 7px;
       background: var(--border);
     }
 
     /* Connector lines — West: left side */
     .west-round .b-matchup::before {
       content: ''; position: absolute;
-      left: 0; top: 16px; height: 56px; width: 1px;
+      left: 0; top: 39px; height: 33px; width: 1px;
       background: var(--border);
     }
     .west-round .b-matchup::after {
       content: ''; position: absolute;
-      left: -7px; top: 44px; height: 1px; width: 7px;
+      left: -7px; top: 56px; height: 1px; width: 7px;
       background: var(--border);
     }
 
@@ -457,7 +453,7 @@
     /* Conference name labels */
     .bracket-conf-labels {
       display: flex;
-      min-width: 700px;
+      min-width: 900px;
       margin-bottom: 6px;
     }
     .bcl-conf { flex: 1; display: flex; }
@@ -620,7 +616,7 @@
     /* Conference name labels in bracket */
     .bracket-conf-names {
       display: flex;
-      min-width: 700px;
+      min-width: 900px;
       margin-bottom: 4px;
     }
     .bcn-conf {
@@ -791,6 +787,15 @@
 const DRAFT = {
   Kevin: ['SAS','DEN','NYK','CLE','ATL','LAL','CHA','PHI','POR','GSW'],
   Derek: ['OKC','DET','BOS','HOU','MIN','TOR','ORL','PHX','LAC','MIA'],
+};
+
+// Short names for compact bracket display
+const SHORT_NAMES = {
+  OKC:'Thunder', DET:'Pistons', BOS:'Celtics', HOU:'Rockets',
+  MIN:'Wolves',  TOR:'Raptors', ORL:'Magic',   PHX:'Suns',
+  LAC:'Clippers',MIA:'Heat',    SAS:'Spurs',   DEN:'Nuggets',
+  NYK:'Knicks',  CLE:'Cavs',    ATL:'Hawks',   LAL:'Lakers',
+  CHA:'Hornets', PHI:'76ers',   POR:'Blazers', GSW:'Warriors',
 };
 
 const TEAM_NAMES = {
@@ -1123,9 +1128,9 @@ function bracketScore(a, b, sm) {
   return `${aW}–${bW}`;
 }
 
-// Returns { score, leader: 'Kevin'|'Derek'|'tied'|null, summary, gameLabel, completed }
+// Returns { score, leader, leadingAbbr, summary, completed }
 function bracketStatus(a, b, sm) {
-  const empty = { score: '', leader: null, summary: '', gameLabel: '', completed: false };
+  const empty = { score: '', leader: null, leadingAbbr: null, summary: '', completed: false };
   if (!a || !b) return empty;
   const s = sm.get([a,b].sort().join('_'));
   if (!s) return empty;
@@ -1133,10 +1138,9 @@ function bracketStatus(a, b, sm) {
   const aW = s.awayAbbr === a ? s.awayWins : s.homeWins;
   const bW = s.awayAbbr === b ? s.awayWins : s.homeWins;
   const score = `${aW}–${bW}`;
-  const total = aW + bW;
-  const gameLabel = s.completed ? `Won in ${total}` : `Gm ${total + 1}`;
-  if (aW === bW) return { score, leader: 'tied', summary: '', gameLabel, completed: s.completed };
-  return { score, leader: aW > bW ? getOwner(a) : getOwner(b), summary: '', gameLabel, completed: s.completed };
+  if (aW === bW) return { score, leader: 'tied', leadingAbbr: null, summary: '', completed: s.completed };
+  const leadingAbbr = aW > bW ? a : b;
+  return { score, leader: aW > bW ? getOwner(a) : getOwner(b), leadingAbbr, summary: '', completed: s.completed };
 }
 
 function buildRounds(conf, sm) {
@@ -1162,32 +1166,41 @@ function bSlot(abbr, seed, isWin, isElim) {
   const o = getOwner(abbr);
   const initial = o === 'Kevin' ? 'K' : o === 'Derek' ? 'D' : '';
   const cls = isWin ? 'b-winner' : isElim ? 'b-elim' : '';
+  const name = SHORT_NAMES[abbr] || '';
   return `<div class="b-slot ${cls}">
     ${seed ? `<span class="b-seed">${seed}</span>` : ''}
     <span class="b-abbr">${abbr}</span>
+    <span class="b-name">${name}</span>
     <span class="b-otag ${ownerCls(o)}">${initial}</span>
   </div>`;
 }
 
 function bMatchup(m) {
   const tW = m.winner === m.t, bW = m.winner === m.b;
-  let gapHtml = '';
+
+  // Series info line above the card
+  let infoText = '', infoColor = 'var(--muted)';
   if (m.score) {
     if (m.leader === 'tied') {
-      gapHtml = `<span class="b-gap-line" style="color:var(--muted)">Tied ${m.score}</span>`;
+      infoText = `Tied ${m.score}`;
     } else if (m.leader) {
-      const col = m.leader === 'Kevin' ? 'var(--kevin)' : 'var(--derek)';
+      infoColor = m.leader === 'Kevin' ? 'var(--kevin)' : 'var(--derek)';
       const initial = m.leader === 'Kevin' ? 'K' : 'D';
       const verb = m.completed ? 'wins' : 'leads';
-      gapHtml = `<span class="b-gap-line" style="color:${col}">${initial} ${verb} ${m.score}</span>`;
+      const teamPart = m.leadingAbbr ? `${m.leadingAbbr} (${initial})` : initial;
+      infoText = `${teamPart} ${verb} ${m.score}`;
     }
   } else if (m.summary) {
-    gapHtml = `<span class="b-gap-line" style="color:var(--muted)">${m.summary}</span>`;
+    infoText = m.summary;
   }
+
+  const cardCls = m.winner ? 'b-card b-card-done' : 'b-card';
   return `<div class="b-matchup">
-    ${bSlot(m.t, m.ts, tW, m.winner && !tW)}
-    <div class="b-gap">${gapHtml}</div>
-    ${bSlot(m.b, m.bs, bW, m.winner && !bW)}
+    <div class="b-series-info" style="color:${infoText ? infoColor : 'transparent'}">${infoText || '·'}</div>
+    <div class="${cardCls}">
+      ${bSlot(m.t, m.ts, tW, m.winner && !tW)}
+      ${bSlot(m.b, m.bs, bW, m.winner && !bW)}
+    </div>
   </div>`;
 }
 
@@ -1233,17 +1246,18 @@ function getSeriesContext(awayAbbr, homeAbbr, sm) {
   if (!s || (s.awayWins === 0 && s.homeWins === 0)) return null;
 
   const aw = s.awayWins, hw = s.homeWins;
-  let owner, text;
+  let owner, leadAbbr, text;
   if (s.completed) {
-    owner = aw >= 4 ? getOwner(s.awayAbbr) : getOwner(s.homeAbbr);
+    leadAbbr = aw >= 4 ? s.awayAbbr : s.homeAbbr;
+    owner = getOwner(leadAbbr);
     const w = aw >= 4 ? aw : hw, l = aw >= 4 ? hw : aw;
-    text = `${owner === 'Kevin' ? 'K' : 'D'} wins ${w}–${l}`;
+    text = `${leadAbbr} (${owner === 'Kevin' ? 'K' : 'D'}) wins ${w}–${l}`;
   } else if (aw > hw) {
-    owner = getOwner(s.awayAbbr);
-    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${aw}–${hw}`;
+    leadAbbr = s.awayAbbr; owner = getOwner(leadAbbr);
+    text = `${leadAbbr} (${owner === 'Kevin' ? 'K' : 'D'}) leads ${aw}–${hw}`;
   } else if (hw > aw) {
-    owner = getOwner(s.homeAbbr);
-    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${hw}–${aw}`;
+    leadAbbr = s.homeAbbr; owner = getOwner(leadAbbr);
+    text = `${leadAbbr} (${owner === 'Kevin' ? 'K' : 'D'}) leads ${hw}–${aw}`;
   } else {
     owner = null;
     text = `Tied ${aw}–${hw}`;
