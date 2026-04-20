@@ -1487,43 +1487,53 @@ function oddsToImpliedProb(line) {
 }
 
 async function fetchChampionshipOdds() {
-  try {
-    // Fetch the list of NBA futures (ESPN core API, CORS-friendly)
-    const listR = await fetch(
-      'https://sports.core.api.espn.com/v2/sports/basketball/nba/futures?limit=25'
-    );
-    if (!listR.ok) return null;
-    const listJ = await listR.json();
+  // Try multiple ESPN endpoints — core API may be CORS-blocked from some clients
+  const FUTURES_URLS = [
+    'https://sports.core.api.espn.com/v2/sports/basketball/nba/futures?limit=25',
+    'https://site.web.api.espn.com/apis/v2/sports/basketball/nba/futures?limit=25',
+  ];
 
-    const refs = (listJ.items || [])
-      .map(i => i.$ref)
-      .filter(Boolean)
-      .slice(0, 10); // NBA has ~5 futures; cap at 10 for safety
+  const safeFetch = async (url) => {
+    try { const r = await fetch(url); return r.ok ? await r.json() : null; }
+    catch { return null; }
+  };
 
-    // Fetch all refs in parallel, then find the championship market
-    const futures = await Promise.all(refs.map(async ref => {
-      try { const r = await fetch(ref); return r.ok ? await r.json() : null; }
-      catch { return null; }
-    }));
+  for (const baseUrl of FUTURES_URLS) {
+    try {
+      const listJ = await safeFetch(baseUrl);
+      if (!listJ) continue;
 
-    const champ = futures.find(f =>
-      f && /nba\s*(champion|finals\s*winner|title)/i.test(f.displayName || f.name || '')
-    ) || futures.find(f =>
-      f && /champion/i.test(f.displayName || f.name || '')
-    );
-    if (!champ?.options?.length) return null;
+      // Items may be inline objects or $ref pointers
+      const items = listJ.items || [];
+      const refs  = items.map(i => i.$ref).filter(Boolean).slice(0, 12);
 
-    const odds = {};
-    for (const opt of champ.options) {
-      const line = opt.value || opt.displayValue || opt.currentLine;
-      if (!line || line === 'EVEN') continue;
-      const abbr = opt.team?.abbreviation
-        ? norm(opt.team.abbreviation)
-        : nameToAbbr(opt.displayName || opt.athlete?.displayName || '');
-      if (abbr) odds[abbr] = String(line);
+      let futures = items.filter(i => !i.$ref); // inline
+      if (refs.length) {
+        const fetched = await Promise.all(refs.map(r => safeFetch(r)));
+        futures = futures.concat(fetched.filter(Boolean));
+      }
+
+      // Flexible match for the championship market
+      const champ = futures.find(f =>
+        /champion|nba title|nba finals|to win.*nba/i.test(f.displayName || f.name || '')
+      );
+      if (!champ?.options?.length) continue;
+
+      const odds = {};
+      for (const opt of champ.options) {
+        const line = opt.value || opt.displayValue || opt.currentLine;
+        if (!line) continue;
+        const abbr = opt.team?.abbreviation
+          ? norm(opt.team.abbreviation)
+          : nameToAbbr(opt.displayName || opt.athlete?.displayName || '');
+        if (abbr) odds[abbr] = String(line);
+      }
+      if (Object.keys(odds).length >= 4) return odds;
+    } catch(e) {
+      console.warn('Futures fetch failed for', baseUrl, e);
     }
-    return Object.keys(odds).length >= 4 ? odds : null;
-  } catch { return null; }
+  }
+  return null;
 }
 
 function calcSideBet(oddsMap, elim) {
@@ -1557,16 +1567,19 @@ function calcSideBet(oddsMap, elim) {
   return { kPct, dPct, kevinTeams, derekTeams };
 }
 
-function renderSideBet(result) {
+function renderSideBet(result, cached = false, cachedTs = null) {
   const el = document.getElementById('side-bet-container');
   if (!result) {
     el.innerHTML = `<div class="side-bet-card">
-      <div class="sb-unavail">Championship odds unavailable — will appear once ESPN publishes futures data.</div>
+      <div class="sb-unavail">Championship odds unavailable — will show here once ESPN publishes futures data for the playoffs.</div>
     </div>`;
     return;
   }
 
   const { kPct, dPct, kevinTeams, derekTeams } = result;
+  const tsLabel = cached && cachedTs
+    ? `Odds as of ${new Date(cachedTs).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`
+    : 'Based on current championship odds';
   const maxRows = Math.max(kevinTeams.length, derekTeams.length);
 
   // Build row pairs (Kevin left, Derek right)
@@ -1600,6 +1613,7 @@ function renderSideBet(result) {
           <div class="sb-sub">backing Derek's teams</div>
         </div>
       </div>
+      <div style="font-size:0.62rem;color:var(--muted);margin-bottom:10px;${cached ? 'opacity:0.7' : ''}">${tsLabel}</div>
       <div class="sb-bar">
         <div class="sb-fill-k" style="width:${kPct}%"></div>
         <div class="sb-fill-d" style="width:${dPct}%"></div>
@@ -1620,7 +1634,7 @@ async function loadData() {
   document.getElementById('error-container').innerHTML = '';
 
   try {
-    const [events, liveEvents, oddsMap] = await Promise.all([
+    const [events, liveEvents, freshOdds] = await Promise.all([
       fetchAll(), fetchLiveGames(), fetchChampionshipOdds(),
     ]);
     cachedHistoricalEvents = events;
@@ -1629,8 +1643,19 @@ async function loadData() {
     const elim     = eliminated(sm);
     const inP      = playoffTeams(sm);
 
+    // Odds: use fresh data if available, else fall back to localStorage cache
+    let oddsMap = freshOdds, oddsCached = false, oddsTs = null;
+    if (freshOdds) {
+      localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
+    } else {
+      try {
+        const saved = JSON.parse(localStorage.getItem('nba26-odds') || 'null');
+        if (saved?.oddsMap) { oddsMap = saved.oddsMap; oddsCached = true; oddsTs = saved.ts; }
+      } catch {}
+    }
+
     renderScoreboard(elim, inP, sm);
-    renderSideBet(calcSideBet(oddsMap, elim));
+    renderSideBet(calcSideBet(oddsMap, elim), oddsCached, oddsTs);
     renderBracket(sm);
     await renderLiveGames(liveEvents, sm);
     renderMatchups(sm, elim);
