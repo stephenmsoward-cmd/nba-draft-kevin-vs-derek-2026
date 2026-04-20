@@ -1514,38 +1514,63 @@ function oddsToImpliedProb(line) {
 
 async function fetchChampionshipOdds() {
   try {
-    const r = await fetch(
-      `https://api.the-odds-api.com/v4/sports/basketball_nba/outrights/?apiKey=${ODDS_API_KEY}&regions=us&oddsFormat=american`
-    );
-    if (!r.ok) { console.warn('Odds API status:', r.status); return null; }
-    const events = await r.json();
-    if (!Array.isArray(events) || !events.length) return null;
+    // Step 1: discover which sport keys offer NBA championship outrights
+    const sportsUrl = `https://api.the-odds-api.com/v4/sports?apiKey=${ODDS_API_KEY}`;
+    console.log('[Odds] Fetching sports list…');
+    const sr = await fetch(sportsUrl);
+    if (!sr.ok) { console.warn('[Odds] Sports list error:', sr.status); return null; }
+    const sports = await sr.json();
 
-    // Average implied probability across all bookmakers for accuracy
-    const totals = {}, counts = {};
-    for (const ev of events) {
-      for (const book of ev.bookmakers || []) {
-        const market = book.markets?.find(m => m.key === 'outrights');
-        if (!market) continue;
-        for (const outcome of market.outcomes || []) {
-          const abbr = nameToAbbr(outcome.name);
-          if (!abbr) continue;
-          const p = outcome.price > 0
-            ? 100 / (outcome.price + 100)
-            : Math.abs(outcome.price) / (Math.abs(outcome.price) + 100);
-          totals[abbr] = (totals[abbr] || 0) + p;
-          counts[abbr] = (counts[abbr] || 0) + 1;
-        }
-      }
+    // Find any basketball sport that has outrights (e.g. "basketball_nba_championship_winner")
+    const candidates = (sports || []).filter(s =>
+      s.group?.toLowerCase().includes('basketball') && s.has_outrights
+    );
+    console.log('[Odds] Basketball outright sports:', candidates.map(s => s.key));
+
+    if (!candidates.length) {
+      console.warn('[Odds] No basketball outright sports found');
+      return null;
     }
 
+    // Step 2: try each candidate until we get data
+    const totals = {}, counts = {};
+    for (const sport of candidates) {
+      const url = `https://api.the-odds-api.com/v4/sports/${sport.key}/outrights?apiKey=${ODDS_API_KEY}&regions=us&oddsFormat=american`;
+      console.log('[Odds] Trying:', sport.key);
+      const r = await fetch(url);
+      if (!r.ok) { console.warn('[Odds]', sport.key, 'status:', r.status); continue; }
+      const events = await r.json();
+      if (!Array.isArray(events) || !events.length) { console.warn('[Odds]', sport.key, 'empty'); continue; }
+
+      console.log('[Odds]', sport.key, '→', events.length, 'event(s)');
+      for (const ev of events) {
+        for (const book of ev.bookmakers || []) {
+          for (const market of (book.markets || [])) {
+            for (const outcome of market.outcomes || []) {
+              const abbr = nameToAbbr(outcome.name);
+              if (!abbr) continue;
+              const price = Number(outcome.price);
+              if (!price) continue;
+              const p = price > 0
+                ? 100 / (price + 100)
+                : Math.abs(price) / (Math.abs(price) + 100);
+              totals[abbr] = (totals[abbr] || 0) + p;
+              counts[abbr] = (counts[abbr] || 0) + 1;
+            }
+          }
+        }
+      }
+      if (Object.keys(totals).length >= 4) break; // found enough, stop
+    }
+
+    console.log('[Odds] Teams found:', Object.keys(totals));
     const probs = {};
     for (const [abbr, total] of Object.entries(totals)) {
-      probs[abbr] = total / counts[abbr]; // avg implied probability (pre-normalization)
+      probs[abbr] = total / counts[abbr];
     }
     return Object.keys(probs).length >= 4 ? probs : null;
   } catch(e) {
-    console.warn('Odds fetch failed:', e);
+    console.warn('[Odds] Fetch failed:', e);
     return null;
   }
 }
@@ -1628,8 +1653,8 @@ function renderSideBet(result, cached = false, cachedTs = null) {
         ${tsLabel}
         <span class="ff-tooltip">
           <span class="ff-ques">?</span>
-          <span class="ff-tooltip-text" style="width:260px;left:auto;right:0;transform:none;">
-            Sportsbook odds carry built-in margin (they sum to &gt;100%). We normalize all alive teams to sum to exactly 100%, then Kevin's teams' probabilities add up to Stephen's %, and Derek's add up to Nathaniel's.
+          <span class="ff-tooltip-text" style="width:280px;left:auto;right:0;transform:none;">
+            Odds are averaged across all available sportsbooks to reduce house margin. We then normalize non-eliminated teams so their probabilities sum to 100%. Kevin's teams' share = Stephen's win probability; Derek's teams' share = Nathaniel's. Odds only refresh automatically when a game ends — not on every page load.
           </span>
         </span>
       </div>
@@ -1653,8 +1678,10 @@ async function loadData() {
   document.getElementById('error-container').innerHTML = '';
 
   try {
-    const [events, liveEvents, freshOdds] = await Promise.all([
-      fetchAll(), fetchLiveGames(), fetchChampionshipOdds(),
+    // Odds are NOT fetched on every page load to conserve API credits.
+    // They're updated automatically when a game ends (via the live ticker below).
+    const [events, liveEvents] = await Promise.all([
+      fetchAll(), fetchLiveGames(),
     ]);
     cachedHistoricalEvents = events;
     // Merge live events so series wins reflect completed games today
@@ -1663,16 +1690,13 @@ async function loadData() {
     cachedElim     = elim;
     const inP      = playoffTeams(sm);
 
-    // Odds: use fresh data if available, else fall back to localStorage cache
-    let oddsMap = freshOdds, oddsCached = false, oddsTs = null;
-    if (freshOdds) {
-      localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
-    } else {
-      try {
-        const saved = JSON.parse(localStorage.getItem('nba26-odds') || 'null');
-        if (saved?.oddsMap) { oddsMap = saved.oddsMap; oddsCached = true; oddsTs = saved.ts; }
-      } catch {}
-    }
+    // Odds: always load from localStorage cache on page load;
+    // fresh fetch only happens when a game ends (in the live refresh timer).
+    let oddsMap = null, oddsCached = false, oddsTs = null;
+    try {
+      const saved = JSON.parse(localStorage.getItem('nba26-odds') || 'null');
+      if (saved?.oddsMap) { oddsMap = saved.oddsMap; oddsCached = true; oddsTs = saved.ts; }
+    } catch {}
 
     renderScoreboard(elim, inP, sm);
     renderSideBet(calcSideBet(oddsMap, elim), oddsCached, oddsTs);
@@ -1680,6 +1704,16 @@ async function loadData() {
     await renderLiveGames(liveEvents, sm);
     renderMatchups(sm, elim);
     renderTeams(elim, inP);
+
+    // If no cached odds exist at all, do a background fetch after content renders
+    if (!oddsMap) {
+      fetchChampionshipOdds().then(freshOdds => {
+        if (freshOdds) {
+          localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
+          renderSideBet(calcSideBet(freshOdds, cachedElim), false, null);
+        }
+      });
+    }
 
     const now = new Date();
     document.getElementById('last-updated').textContent =
