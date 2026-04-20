@@ -1173,14 +1173,13 @@ function bMatchup(m) {
   const tW = m.winner === m.t, bW = m.winner === m.b;
   let gapHtml = '';
   if (m.score) {
-    const gameSuffix = m.gameLabel ? ` · ${m.gameLabel}` : '';
     if (m.leader === 'tied') {
-      gapHtml = `<span class="b-gap-line" style="color:var(--muted)">Tied ${m.score}${gameSuffix}</span>`;
+      gapHtml = `<span class="b-gap-line" style="color:var(--muted)">Tied ${m.score}</span>`;
     } else if (m.leader) {
       const col = m.leader === 'Kevin' ? 'var(--kevin)' : 'var(--derek)';
       const initial = m.leader === 'Kevin' ? 'K' : 'D';
       const verb = m.completed ? 'wins' : 'leads';
-      gapHtml = `<span class="b-gap-line" style="color:${col}">${initial} ${verb} ${m.score}${gameSuffix}</span>`;
+      gapHtml = `<span class="b-gap-line" style="color:${col}">${initial} ${verb} ${m.score}</span>`;
     }
   } else if (m.summary) {
     gapHtml = `<span class="b-gap-line" style="color:var(--muted)">${m.summary}</span>`;
@@ -1234,23 +1233,20 @@ function getSeriesContext(awayAbbr, homeAbbr, sm) {
   if (!s || (s.awayWins === 0 && s.homeWins === 0)) return null;
 
   const aw = s.awayWins, hw = s.homeWins;
-  const total = aw + hw;
-  const gameLabel = s.completed ? `Won in ${total}` : `Gm ${total + 1}`;
-
   let owner, text;
   if (s.completed) {
     owner = aw >= 4 ? getOwner(s.awayAbbr) : getOwner(s.homeAbbr);
     const w = aw >= 4 ? aw : hw, l = aw >= 4 ? hw : aw;
-    text = `${owner === 'Kevin' ? 'K' : 'D'} wins ${w}–${l} · ${gameLabel}`;
+    text = `${owner === 'Kevin' ? 'K' : 'D'} wins ${w}–${l}`;
   } else if (aw > hw) {
     owner = getOwner(s.awayAbbr);
-    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${aw}–${hw} · ${gameLabel}`;
+    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${aw}–${hw}`;
   } else if (hw > aw) {
     owner = getOwner(s.homeAbbr);
-    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${hw}–${aw} · ${gameLabel}`;
+    text = `${owner === 'Kevin' ? 'K' : 'D'} leads ${hw}–${aw}`;
   } else {
     owner = null;
-    text = `Tied ${aw}–${hw} · ${gameLabel}`;
+    text = `Tied ${aw}–${hw}`;
   }
   return { text, owner };
 }
@@ -1320,7 +1316,7 @@ async function renderLiveGames(events, sm) {
     const homeWin = homeScore > awayScore;
 
     const statusCls   = isLive ? '' : isFinal ? 'final' : 'sched';
-    const statusLabel = isLive ? detail : isFinal ? `Final${detail ? ' · ' + detail : ''}` : detail;
+    const statusLabel = detail || (isFinal ? 'Final' : '');
     const showScore   = isLive || isFinal;
 
     const ctx = showScore ? getSeriesContext(awayAbbr, homeAbbr, sm) : null;
