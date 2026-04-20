@@ -1360,6 +1360,10 @@ function getSeriesContext(awayAbbr, homeAbbr, sm) {
 // ── Live games ────────────────────────────────────────────────────────
 let liveRefreshTimer = null;
 let cachedHistoricalEvents = [];
+let prevLiveGameIds = new Set();   // tracks which games were live last tick
+let cachedElim = new Set();        // latest eliminated set for odds refresh
+
+const ODDS_API_KEY = '0e05e2616bdebdda28c75f5efd959281';
 
 async function findNextGameDate() {
   for (let i = 1; i <= 8; i++) {
@@ -1451,14 +1455,36 @@ async function renderLiveGames(events, sm) {
       </div>`;
   }).join('');
 
+  // Track which games are currently live for game-end detection next tick
+  prevLiveGameIds = new Set(
+    events.filter(ev => ev.competitions?.[0]?.status?.type?.state === 'in').map(ev => ev.id)
+  );
+
   // Auto-refresh every 30s while games are live
   clearTimeout(liveRefreshTimer);
   if (anyLive) {
     liveRefreshTimer = setTimeout(async () => {
       const fresh = await fetchLiveGames();
-      // Merge fresh live events with historical so series wins stay current
       const updatedSm = processEvents([...cachedHistoricalEvents, ...fresh]);
+      cachedElim = eliminated(updatedSm);
+
+      // Detect if any previously live game just became final
+      const freshLiveIds = new Set(
+        fresh.filter(ev => ev.competitions?.[0]?.status?.type?.state === 'in').map(ev => ev.id)
+      );
+      const gameJustEnded = prevLiveGameIds.size > 0 &&
+        [...prevLiveGameIds].some(id => !freshLiveIds.has(id));
+
       await renderLiveGames(fresh, updatedSm);
+
+      // Only fetch new odds when a game actually finishes
+      if (gameJustEnded) {
+        const freshOdds = await fetchChampionshipOdds();
+        if (freshOdds) {
+          localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
+          renderSideBet(calcSideBet(freshOdds, cachedElim), false, null);
+        }
+      }
     }, 30000);
   }
 }
@@ -1487,64 +1513,49 @@ function oddsToImpliedProb(line) {
 }
 
 async function fetchChampionshipOdds() {
-  // Try multiple ESPN endpoints — core API may be CORS-blocked from some clients
-  const FUTURES_URLS = [
-    'https://sports.core.api.espn.com/v2/sports/basketball/nba/futures?limit=25',
-    'https://site.web.api.espn.com/apis/v2/sports/basketball/nba/futures?limit=25',
-  ];
+  try {
+    const r = await fetch(
+      `https://api.the-odds-api.com/v4/sports/basketball_nba/outrights/?apiKey=${ODDS_API_KEY}&regions=us&oddsFormat=american`
+    );
+    if (!r.ok) { console.warn('Odds API status:', r.status); return null; }
+    const events = await r.json();
+    if (!Array.isArray(events) || !events.length) return null;
 
-  const safeFetch = async (url) => {
-    try { const r = await fetch(url); return r.ok ? await r.json() : null; }
-    catch { return null; }
-  };
-
-  for (const baseUrl of FUTURES_URLS) {
-    try {
-      const listJ = await safeFetch(baseUrl);
-      if (!listJ) continue;
-
-      // Items may be inline objects or $ref pointers
-      const items = listJ.items || [];
-      const refs  = items.map(i => i.$ref).filter(Boolean).slice(0, 12);
-
-      let futures = items.filter(i => !i.$ref); // inline
-      if (refs.length) {
-        const fetched = await Promise.all(refs.map(r => safeFetch(r)));
-        futures = futures.concat(fetched.filter(Boolean));
+    // Average implied probability across all bookmakers for accuracy
+    const totals = {}, counts = {};
+    for (const ev of events) {
+      for (const book of ev.bookmakers || []) {
+        const market = book.markets?.find(m => m.key === 'outrights');
+        if (!market) continue;
+        for (const outcome of market.outcomes || []) {
+          const abbr = nameToAbbr(outcome.name);
+          if (!abbr) continue;
+          const p = outcome.price > 0
+            ? 100 / (outcome.price + 100)
+            : Math.abs(outcome.price) / (Math.abs(outcome.price) + 100);
+          totals[abbr] = (totals[abbr] || 0) + p;
+          counts[abbr] = (counts[abbr] || 0) + 1;
+        }
       }
-
-      // Flexible match for the championship market
-      const champ = futures.find(f =>
-        /champion|nba title|nba finals|to win.*nba/i.test(f.displayName || f.name || '')
-      );
-      if (!champ?.options?.length) continue;
-
-      const odds = {};
-      for (const opt of champ.options) {
-        const line = opt.value || opt.displayValue || opt.currentLine;
-        if (!line) continue;
-        const abbr = opt.team?.abbreviation
-          ? norm(opt.team.abbreviation)
-          : nameToAbbr(opt.displayName || opt.athlete?.displayName || '');
-        if (abbr) odds[abbr] = String(line);
-      }
-      if (Object.keys(odds).length >= 4) return odds;
-    } catch(e) {
-      console.warn('Futures fetch failed for', baseUrl, e);
     }
+
+    const probs = {};
+    for (const [abbr, total] of Object.entries(totals)) {
+      probs[abbr] = total / counts[abbr]; // avg implied probability (pre-normalization)
+    }
+    return Object.keys(probs).length >= 4 ? probs : null;
+  } catch(e) {
+    console.warn('Odds fetch failed:', e);
+    return null;
   }
-  return null;
 }
 
 function calcSideBet(oddsMap, elim) {
   if (!oddsMap) return null;
-  // Only consider alive teams
+  // Values are already avg implied probabilities (pre-normalization)
   const probs = {};
-  for (const [abbr, line] of Object.entries(oddsMap)) {
-    if (!elim.has(abbr)) {
-      const p = oddsToImpliedProb(line);
-      if (p > 0) probs[abbr] = p;
-    }
+  for (const [abbr, val] of Object.entries(oddsMap)) {
+    if (!elim.has(abbr) && val > 0) probs[abbr] = val;
   }
   const total = Object.values(probs).reduce((s, p) => s + p, 0);
   if (total === 0) return null;
@@ -1649,6 +1660,7 @@ async function loadData() {
     // Merge live events so series wins reflect completed games today
     const sm       = processEvents([...events, ...liveEvents]);
     const elim     = eliminated(sm);
+    cachedElim     = elim;
     const inP      = playoffTeams(sm);
 
     // Odds: use fresh data if available, else fall back to localStorage cache
