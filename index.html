@@ -685,6 +685,90 @@
       margin-left: 2px;
     }
 
+    /* ── Side Bet ── */
+    .side-bet-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 36px;
+    }
+
+    .sb-players {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 16px;
+    }
+
+    .sb-player-right { text-align: right; }
+
+    .sb-bettor {
+      font-size: 0.95rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .sb-bettor.stephen   { color: var(--kevin); }
+    .sb-bettor.nathaniel { color: var(--derek); }
+
+    .sb-sub {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .sb-bar {
+      height: 12px;
+      border-radius: 6px;
+      background: var(--surface2);
+      overflow: hidden;
+      display: flex;
+    }
+    .sb-fill-k { height: 100%; background: var(--kevin); flex-shrink: 0; }
+    .sb-fill-d { height: 100%; background: var(--derek); flex-shrink: 0; margin-left: auto; }
+
+    .sb-pct-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+
+    .sb-pct {
+      font-size: 2.2rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .sb-pct.k { color: var(--kevin); }
+    .sb-pct.d { color: var(--derek); }
+
+    .sb-breakdown {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 12px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .sb-team-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 0.75rem;
+    }
+    .sb-team-row.right { flex-direction: row-reverse; }
+
+    .sb-team-abbr { font-weight: 800; }
+    .sb-team-pct  { color: var(--muted); font-weight: 600; font-size: 0.7rem; }
+
+    .sb-unavail {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 12px 0 4px;
+    }
+
     @media (max-width: 560px) {
       .scoreboard {
         grid-template-columns: 1fr 1fr;
@@ -721,6 +805,14 @@
       <div class="player-label">teams alive</div>
       <div class="player-ff" id="derek-ff"></div>
     </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Side Bet — Stephen vs. Nathaniel</span>
+    <div class="section-line"></div>
+  </div>
+  <div id="side-bet-container">
+    <div class="side-bet-card"><div class="sb-unavail">Loading odds…</div></div>
   </div>
 
   <div class="section-header">
@@ -1371,6 +1463,155 @@ async function renderLiveGames(events, sm) {
   }
 }
 
+// ── Side Bet ──────────────────────────────────────────────────────────
+function nameToAbbr(name) {
+  const s = (name || '').toLowerCase();
+  const map = {
+    'thunder':'OKC','pistons':'DET','celtics':'BOS','rockets':'HOU',
+    'timberwolves':'MIN','wolves':'MIN','raptors':'TOR','magic':'ORL',
+    'suns':'PHX','clippers':'LAC','heat':'MIA','spurs':'SAS',
+    'nuggets':'DEN','knicks':'NYK','cavaliers':'CLE','cavs':'CLE',
+    'hawks':'ATL','lakers':'LAL','hornets':'CHA','76ers':'PHI',
+    'sixers':'PHI','trail blazers':'POR','blazers':'POR','warriors':'GSW',
+  };
+  for (const [nick, abbr] of Object.entries(map)) {
+    if (s.includes(nick)) return abbr;
+  }
+  return null;
+}
+
+function oddsToImpliedProb(line) {
+  const n = parseInt(String(line).replace(/[^\d\-+]/g, '')) || 0;
+  if (n === 0) return 0;
+  return n > 0 ? 100 / (n + 100) : Math.abs(n) / (Math.abs(n) + 100);
+}
+
+async function fetchChampionshipOdds() {
+  try {
+    // Fetch the list of NBA futures (ESPN core API, CORS-friendly)
+    const listR = await fetch(
+      'https://sports.core.api.espn.com/v2/sports/basketball/nba/futures?limit=25'
+    );
+    if (!listR.ok) return null;
+    const listJ = await listR.json();
+
+    const refs = (listJ.items || [])
+      .map(i => i.$ref)
+      .filter(Boolean)
+      .slice(0, 10); // NBA has ~5 futures; cap at 10 for safety
+
+    // Fetch all refs in parallel, then find the championship market
+    const futures = await Promise.all(refs.map(async ref => {
+      try { const r = await fetch(ref); return r.ok ? await r.json() : null; }
+      catch { return null; }
+    }));
+
+    const champ = futures.find(f =>
+      f && /nba\s*(champion|finals\s*winner|title)/i.test(f.displayName || f.name || '')
+    ) || futures.find(f =>
+      f && /champion/i.test(f.displayName || f.name || '')
+    );
+    if (!champ?.options?.length) return null;
+
+    const odds = {};
+    for (const opt of champ.options) {
+      const line = opt.value || opt.displayValue || opt.currentLine;
+      if (!line || line === 'EVEN') continue;
+      const abbr = opt.team?.abbreviation
+        ? norm(opt.team.abbreviation)
+        : nameToAbbr(opt.displayName || opt.athlete?.displayName || '');
+      if (abbr) odds[abbr] = String(line);
+    }
+    return Object.keys(odds).length >= 4 ? odds : null;
+  } catch { return null; }
+}
+
+function calcSideBet(oddsMap, elim) {
+  if (!oddsMap) return null;
+  // Only consider alive teams
+  const probs = {};
+  for (const [abbr, line] of Object.entries(oddsMap)) {
+    if (!elim.has(abbr)) {
+      const p = oddsToImpliedProb(line);
+      if (p > 0) probs[abbr] = p;
+    }
+  }
+  const total = Object.values(probs).reduce((s, p) => s + p, 0);
+  if (total === 0) return null;
+
+  // Normalize to remove bookmaker margin, then split by owner
+  let kevinProb = 0, derekProb = 0;
+  const kevinTeams = [], derekTeams = [];
+  for (const [abbr, p] of Object.entries(probs)) {
+    const normP = p / total;
+    const owner = getOwner(abbr);
+    if (owner === 'Kevin') { kevinProb += normP; kevinTeams.push({ abbr, prob: normP }); }
+    else if (owner === 'Derek') { derekProb += normP; derekTeams.push({ abbr, prob: normP }); }
+  }
+  kevinTeams.sort((a, b) => b.prob - a.prob);
+  derekTeams.sort((a, b) => b.prob - a.prob);
+
+  // Round so they add cleanly
+  const kPct = Math.round(kevinProb * 100);
+  const dPct = 100 - kPct;
+  return { kPct, dPct, kevinTeams, derekTeams };
+}
+
+function renderSideBet(result) {
+  const el = document.getElementById('side-bet-container');
+  if (!result) {
+    el.innerHTML = `<div class="side-bet-card">
+      <div class="sb-unavail">Championship odds unavailable — will appear once ESPN publishes futures data.</div>
+    </div>`;
+    return;
+  }
+
+  const { kPct, dPct, kevinTeams, derekTeams } = result;
+  const maxRows = Math.max(kevinTeams.length, derekTeams.length);
+
+  // Build row pairs (Kevin left, Derek right)
+  let rows = '';
+  for (let i = 0; i < maxRows; i++) {
+    const k = kevinTeams[i], d = derekTeams[i];
+    const kHtml = k
+      ? `<div class="sb-team-row">
+           <span class="sb-team-abbr owner-kevin">${k.abbr}</span>
+           <span class="sb-team-pct">${Math.round(k.prob * 100)}%</span>
+         </div>`
+      : '<div></div>';
+    const dHtml = d
+      ? `<div class="sb-team-row right">
+           <span class="sb-team-abbr owner-derek">${d.abbr}</span>
+           <span class="sb-team-pct">${Math.round(d.prob * 100)}%</span>
+         </div>`
+      : '<div></div>';
+    rows += kHtml + dHtml;
+  }
+
+  el.innerHTML = `
+    <div class="side-bet-card">
+      <div class="sb-players">
+        <div>
+          <div class="sb-bettor stephen">Stephen</div>
+          <div class="sb-sub">backing Kevin's teams</div>
+        </div>
+        <div class="sb-player-right">
+          <div class="sb-bettor nathaniel">Nathaniel</div>
+          <div class="sb-sub">backing Derek's teams</div>
+        </div>
+      </div>
+      <div class="sb-bar">
+        <div class="sb-fill-k" style="width:${kPct}%"></div>
+        <div class="sb-fill-d" style="width:${dPct}%"></div>
+      </div>
+      <div class="sb-pct-row">
+        <span class="sb-pct k">${kPct}%</span>
+        <span class="sb-pct d">${dPct}%</span>
+      </div>
+      <div class="sb-breakdown">${rows}</div>
+    </div>`;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────
 async function loadData() {
   const btn = document.getElementById('refresh-btn');
@@ -1379,7 +1620,9 @@ async function loadData() {
   document.getElementById('error-container').innerHTML = '';
 
   try {
-    const [events, liveEvents] = await Promise.all([fetchAll(), fetchLiveGames()]);
+    const [events, liveEvents, oddsMap] = await Promise.all([
+      fetchAll(), fetchLiveGames(), fetchChampionshipOdds(),
+    ]);
     cachedHistoricalEvents = events;
     // Merge live events so series wins reflect completed games today
     const sm       = processEvents([...events, ...liveEvents]);
@@ -1387,6 +1630,7 @@ async function loadData() {
     const inP      = playoffTeams(sm);
 
     renderScoreboard(elim, inP, sm);
+    renderSideBet(calcSideBet(oddsMap, elim));
     renderBracket(sm);
     await renderLiveGames(liveEvents, sm);
     renderMatchups(sm, elim);
