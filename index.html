@@ -1276,7 +1276,8 @@ async function fetchLiveGames() {
   try {
     const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?seasontype=3');
     const j = await r.json();
-    return j.events || [];
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    return (j.events || []).map(e => ({ ...e, _date: today }));
   } catch { return []; }
 }
 
