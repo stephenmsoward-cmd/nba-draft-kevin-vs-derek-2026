@@ -1512,63 +1512,53 @@ function oddsToImpliedProb(line) {
   return n > 0 ? 100 / (n + 100) : Math.abs(n) / (Math.abs(n) + 100);
 }
 
-async function fetchChampionshipOdds() {
-  try {
-    // Step 1: discover which sport keys offer NBA championship outrights
-    const sportsUrl = `https://api.the-odds-api.com/v4/sports?apiKey=${ODDS_API_KEY}`;
-    console.log('[Odds] Fetching sports list…');
-    const sr = await fetch(sportsUrl);
-    if (!sr.ok) { console.warn('[Odds] Sports list error:', sr.status); return null; }
-    const sports = await sr.json();
+// Known sport key for NBA championship futures on The Odds API
+const ODDS_SPORT_KEY = 'basketball_nba_championship_winner';
 
-    // Find any basketball sport that has outrights (e.g. "basketball_nba_championship_winner")
-    const candidates = (sports || []).filter(s =>
-      s.group?.toLowerCase().includes('basketball') && s.has_outrights
-    );
-    console.log('[Odds] Basketball outright sports:', candidates.map(s => s.key));
+async function fetchOddsFromEndpoint(path, params) {
+  const qs = new URLSearchParams({ apiKey: ODDS_API_KEY, regions: 'us,uk,eu,au', oddsFormat: 'american', ...params }).toString();
+  const url = `https://api.the-odds-api.com/v4/sports/${ODDS_SPORT_KEY}/${path}?${qs}`;
+  console.log('[Odds] GET', path, params);
+  const r = await fetch(url);
+  console.log('[Odds] →', r.status, path);
+  if (!r.ok) return null;
+  const data = await r.json();
+  return Array.isArray(data) && data.length ? data : null;
+}
 
-    if (!candidates.length) {
-      console.warn('[Odds] No basketball outright sports found');
-      return null;
-    }
-
-    // Step 2: try each candidate until we get data
-    const totals = {}, counts = {};
-    for (const sport of candidates) {
-      const url = `https://api.the-odds-api.com/v4/sports/${sport.key}/outrights?apiKey=${ODDS_API_KEY}&regions=us&oddsFormat=american`;
-      console.log('[Odds] Trying:', sport.key);
-      const r = await fetch(url);
-      if (!r.ok) { console.warn('[Odds]', sport.key, 'status:', r.status); continue; }
-      const events = await r.json();
-      if (!Array.isArray(events) || !events.length) { console.warn('[Odds]', sport.key, 'empty'); continue; }
-
-      console.log('[Odds]', sport.key, '→', events.length, 'event(s)');
-      for (const ev of events) {
-        for (const book of ev.bookmakers || []) {
-          for (const market of (book.markets || [])) {
-            for (const outcome of market.outcomes || []) {
-              const abbr = nameToAbbr(outcome.name);
-              if (!abbr) continue;
-              const price = Number(outcome.price);
-              if (!price) continue;
-              const p = price > 0
-                ? 100 / (price + 100)
-                : Math.abs(price) / (Math.abs(price) + 100);
-              totals[abbr] = (totals[abbr] || 0) + p;
-              counts[abbr] = (counts[abbr] || 0) + 1;
-            }
-          }
+function parseOddsEvents(events) {
+  const totals = {}, counts = {};
+  for (const ev of events) {
+    for (const book of ev.bookmakers || []) {
+      for (const market of book.markets || []) {
+        for (const outcome of market.outcomes || []) {
+          const abbr = nameToAbbr(outcome.name);
+          if (!abbr) continue;
+          const price = Number(outcome.price);
+          if (!price) continue;
+          const p = price > 0 ? 100/(price+100) : Math.abs(price)/(Math.abs(price)+100);
+          totals[abbr] = (totals[abbr] || 0) + p;
+          counts[abbr] = (counts[abbr] || 0) + 1;
         }
       }
-      if (Object.keys(totals).length >= 4) break; // found enough, stop
     }
+  }
+  console.log('[Odds] Teams parsed:', Object.keys(totals));
+  if (Object.keys(totals).length < 4) return null;
+  const probs = {};
+  for (const [abbr, total] of Object.entries(totals)) probs[abbr] = total / counts[abbr];
+  return probs;
+}
 
-    console.log('[Odds] Teams found:', Object.keys(totals));
-    const probs = {};
-    for (const [abbr, total] of Object.entries(totals)) {
-      probs[abbr] = total / counts[abbr];
-    }
-    return Object.keys(probs).length >= 4 ? probs : null;
+async function fetchChampionshipOdds() {
+  try {
+    // Try 1: outrights endpoint (canonical futures endpoint)
+    let events = await fetchOddsFromEndpoint('outrights', {});
+    // Try 2: odds endpoint with outrights market (alternative format some sports use)
+    if (!events) events = await fetchOddsFromEndpoint('odds', { markets: 'outrights' });
+    // Try 3: odds endpoint with h2h (fallback — unlikely to have team winner odds but worth a shot)
+    if (!events) { console.warn('[Odds] No data from any endpoint — market may be unavailable'); return null; }
+    return parseOddsEvents(events);
   } catch(e) {
     console.warn('[Odds] Fetch failed:', e);
     return null;
