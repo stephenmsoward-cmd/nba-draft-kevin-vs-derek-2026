@@ -1362,6 +1362,7 @@ let liveRefreshTimer = null;
 let cachedHistoricalEvents = [];
 let prevLiveGameIds = new Set();   // tracks which games were live last tick
 let cachedElim = new Set();        // latest eliminated set for odds refresh
+let cachedInPlayoffs = new Set();  // current playoff teams, for odds filtering
 
 const ODDS_API_KEY = '0e05e2616bdebdda28c75f5efd959281';
 
@@ -1482,7 +1483,7 @@ async function renderLiveGames(events, sm) {
         const freshOdds = await fetchChampionshipOdds();
         if (freshOdds) {
           localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
-          renderSideBet(calcSideBet(freshOdds, cachedElim), false, null);
+          renderSideBet(calcSideBet(freshOdds, cachedElim, cachedInPlayoffs), false, null);
         }
       }
     }, 30000);
@@ -1565,13 +1566,18 @@ async function fetchChampionshipOdds() {
   }
 }
 
-function calcSideBet(oddsMap, elim) {
+function calcSideBet(oddsMap, elim, inPlayoffs) {
   if (!oddsMap) return null;
-  // Values are already avg implied probabilities (pre-normalization)
+  // Only include teams actually in THIS year's playoffs — filters out stale pre-season
+  // futures odds for non-playoff teams which would distort normalization.
   const probs = {};
+  const skipped = [];
   for (const [abbr, val] of Object.entries(oddsMap)) {
-    if (!elim.has(abbr) && val > 0) probs[abbr] = val;
+    const inP = !inPlayoffs || inPlayoffs.has(abbr);
+    if (inP && !elim.has(abbr) && val > 0) probs[abbr] = val;
+    else skipped.push(abbr);
   }
+  console.log('[SideBet] Including:', Object.keys(probs), '| Skipped:', skipped);
   const total = Object.values(probs).reduce((s, p) => s + p, 0);
   if (total === 0) return null;
 
@@ -1679,6 +1685,7 @@ async function loadData() {
     const elim     = eliminated(sm);
     cachedElim     = elim;
     const inP      = playoffTeams(sm);
+    cachedInPlayoffs = inP;
 
     // Odds: always load from localStorage cache on page load;
     // fresh fetch only happens when a game ends (in the live refresh timer).
@@ -1689,7 +1696,7 @@ async function loadData() {
     } catch {}
 
     renderScoreboard(elim, inP, sm);
-    renderSideBet(calcSideBet(oddsMap, elim), oddsCached, oddsTs);
+    renderSideBet(calcSideBet(oddsMap, elim, inP), oddsCached, oddsTs);
     renderBracket(sm);
     await renderLiveGames(liveEvents, sm);
     renderMatchups(sm, elim);
@@ -1700,7 +1707,7 @@ async function loadData() {
       fetchChampionshipOdds().then(freshOdds => {
         if (freshOdds) {
           localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
-          renderSideBet(calcSideBet(freshOdds, cachedElim), false, null);
+          renderSideBet(calcSideBet(freshOdds, cachedElim, cachedInPlayoffs), false, null);
         }
       });
     }
