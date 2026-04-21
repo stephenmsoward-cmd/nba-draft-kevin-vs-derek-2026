@@ -257,48 +257,48 @@
     }
 
     /* Teams columns */
-    .teams-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 40px;
-    }
-
-    .teams-column {
+    /* Draft picks table */
+    .draft-table {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
+      margin-bottom: 40px;
     }
 
-    .teams-column-header {
-      padding: 13px 16px;
-      font-size: 0.82rem;
-      font-weight: 800;
+    .draft-table-header {
+      display: grid;
+      grid-template-columns: 36px 1fr 1fr 70px 60px;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      border-bottom: 1px solid var(--border);
     }
 
-    .teams-column.kevin .teams-column-header { color: var(--kevin); }
-    .teams-column.derek .teams-column-header { color: var(--derek); }
-
-    .team-row {
-      display: flex;
+    .draft-row {
+      display: grid;
+      grid-template-columns: 36px 1fr 1fr 70px 60px;
+      gap: 8px;
       align-items: center;
       padding: 9px 16px;
       border-bottom: 1px solid var(--bg);
-      gap: 10px;
+      transition: opacity 0.15s;
     }
 
-    .team-row:last-child { border-bottom: none; }
-    .team-row.eliminated { opacity: 0.28; }
-    .team-row.no-playoffs { opacity: 0.2; }
-    .team-row.eliminated .team-abbr { text-decoration: line-through; }
+    .draft-row:last-child { border-bottom: none; }
+    .draft-row.eliminated { opacity: 0.28; }
+    .draft-row.no-playoffs { opacity: 0.2; }
+    .draft-row.eliminated .dr-abbr { text-decoration: line-through; }
 
-    .team-row .team-abbr { font-size: 0.88rem; font-weight: 800; width: 36px; flex-shrink: 0; }
-    .team-row .team-name { font-size: 0.8rem; color: var(--muted); flex: 1; }
-    .team-row .team-status { font-size: 0.75rem; font-weight: 700; }
+    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
+    .dr-abbr   { font-size: 0.88rem; font-weight: 800; }
+    .dr-name   { font-size: 0.8rem; color: var(--muted); }
+    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+    .dr-status { font-size: 0.75rem; font-weight: 700; text-align: right; }
 
     .s-alive { color: var(--green); }
     .s-elim  { color: var(--derek); }
@@ -774,7 +774,8 @@
         grid-template-columns: 1fr 1fr;
       }
       .score-vs { display: none; }
-      .teams-grid { grid-template-columns: 1fr; }
+      .draft-table-header,
+      .draft-row { grid-template-columns: 28px 1fr 1fr 60px 50px; gap: 6px; }
     }
   </style>
 </head>
@@ -868,7 +869,7 @@
     <span class="section-title">Draft Picks</span>
     <div class="section-line"></div>
   </div>
-  <div class="teams-grid" id="teams-container"></div>
+  <div id="teams-container"></div>
 
   <div class="footer">Data via ESPN · Updates on page load</div>
 
@@ -1146,33 +1147,63 @@ function renderMatchups(seriesMap, elim) {
   }).join('');
 }
 
+// Draft order — 1-indexed snake draft
+const DRAFT_ORDER = [
+  { pick:1,  owner:'Derek', abbr:'OKC' },
+  { pick:2,  owner:'Kevin', abbr:'SAS' },
+  { pick:3,  owner:'Kevin', abbr:'DEN' },
+  { pick:4,  owner:'Derek', abbr:'DET' },
+  { pick:5,  owner:'Derek', abbr:'BOS' },
+  { pick:6,  owner:'Kevin', abbr:'NYK' },
+  { pick:7,  owner:'Kevin', abbr:'CLE' },
+  { pick:8,  owner:'Derek', abbr:'HOU' },
+  { pick:9,  owner:'Derek', abbr:'MIN' },
+  { pick:10, owner:'Kevin', abbr:'ATL' },
+  { pick:11, owner:'Kevin', abbr:'LAL' },
+  { pick:12, owner:'Derek', abbr:'TOR' },
+  { pick:13, owner:'Derek', abbr:'ORL' },
+  { pick:14, owner:'Kevin', abbr:'CHA' },
+  { pick:15, owner:'Kevin', abbr:'PHI' },
+  { pick:16, owner:'Derek', abbr:'PHX' },
+  { pick:17, owner:'Derek', abbr:'LAC' },
+  { pick:18, owner:'Kevin', abbr:'POR' },
+  { pick:19, owner:'Kevin', abbr:'GSW' },
+  { pick:20, owner:'Derek', abbr:'MIA' },
+];
+
 function renderTeams(elim, inPlayoffs) {
   const el = document.getElementById('teams-container');
   const knownPlayoffs = inPlayoffs.size > 0;
 
-  const col = (name) => {
-    const cls = name.toLowerCase();
-    const rows = DRAFT[name].map(abbr => {
-      const inP = inPlayoffs.has(abbr);
-      const isElim = elim.has(abbr);
-      const rowCls = isElim ? 'eliminated' : (!inP && knownPlayoffs ? 'no-playoffs' : '');
-      const sCls   = isElim ? 's-elim' : (!inP && knownPlayoffs ? 's-none' : 's-alive');
-      const icon   = isElim ? '✗' : (!inP && knownPlayoffs ? '—' : '✓');
-      return `
-        <div class="team-row ${rowCls}">
-          <span class="team-abbr">${abbr}</span>
-          <span class="team-name">${TEAM_NAMES[abbr] || ''}</span>
-          <span class="team-status ${sCls}">${icon}</span>
-        </div>`;
-    }).join('');
-    return `
-      <div class="teams-column ${cls}">
-        <div class="teams-column-header">${name}'s Picks</div>
-        ${rows}
-      </div>`;
-  };
+  const rows = DRAFT_ORDER.map(({ pick, owner, abbr }) => {
+    const inP    = inPlayoffs.has(abbr);
+    const isElim = elim.has(abbr);
+    const rowCls = isElim ? 'eliminated' : (!inP && knownPlayoffs ? 'no-playoffs' : '');
+    const ownerCls_ = owner === 'Kevin' ? 'owner-kevin' : 'owner-derek';
+    const statusCls = isElim ? 's-elim' : (!inP && knownPlayoffs ? 's-none' : 's-alive');
+    const statusTxt = isElim ? 'Eliminated' : (!inP && knownPlayoffs ? '—' : 'Alive');
 
-  el.innerHTML = col('Kevin') + col('Derek');
+    return `
+      <div class="draft-row ${rowCls}">
+        <span class="dr-pick">${pick}</span>
+        <span class="dr-abbr">${abbr}</span>
+        <span class="dr-name">${TEAM_NAMES[abbr] || ''}</span>
+        <span class="dr-owner ${ownerCls_}">${owner}</span>
+        <span class="dr-status ${statusCls}">${statusTxt}</span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="draft-table">
+      <div class="draft-table-header">
+        <span>Pick</span>
+        <span>Team</span>
+        <span>Full Name</span>
+        <span>Drafter</span>
+        <span style="text-align:right">Status</span>
+      </div>
+      ${rows}
+    </div>`;
 }
 
 // ── Tab toggle ────────────────────────────────────────────────────────
