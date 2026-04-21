@@ -47,6 +47,19 @@ jobs:
               else:
                   return abs(n) / (abs(n) + 100)
 
+          # Known NBA team keywords — used to filter out junk rows (spreads, totals, etc.)
+          NBA_TEAM_KEYWORDS = [
+              'thunder','pistons','celtics','rockets','timberwolves','raptors',
+              'magic','suns','clippers','heat','spurs','nuggets','knicks',
+              'cavaliers','hawks','lakers','hornets','76ers','sixers',
+              'trail blazers','blazers','warriors','pacers','bulls','nets',
+              'kings','grizzlies','pelicans','mavericks','jazz','wizards','bucks',
+          ]
+
+          def is_nba_team(text):
+              t = text.lower()
+              return any(kw in t for kw in NBA_TEAM_KEYWORDS)
+
           probs = {}
           source = 'unknown'
 
@@ -65,6 +78,9 @@ jobs:
                       if len(cells) >= 2:
                           team_cell = cells[0].get_text(strip=True)
                           odds_cell  = cells[-1].get_text(strip=True)
+                          # Only accept rows where team cell matches a known NBA team
+                          if not is_nba_team(team_cell):
+                              continue
                           # odds look like "+550" or "-110" or "EVEN"
                           if re.search(r'[+-]?\d{2,5}', odds_cell) or odds_cell.upper() == 'EVEN':
                               odds_str = '100' if odds_cell.upper() == 'EVEN' else odds_cell
@@ -87,7 +103,7 @@ jobs:
                                   candidate = lines[j]
                                   # Team names are reasonable length and don't look like odds/numbers
                                   # Allow "76ers" style names — just exclude pure-numeric lines
-                                  if candidate and not re.fullmatch(r'[+-]?\d+', candidate) and 3 < len(candidate) < 40:
+                                  if candidate and is_nba_team(candidate) and 3 < len(candidate) < 40:
                                       odds_str = '100' if line.upper() == 'EVEN' else line
                                       p = american_to_prob(odds_str)
                                       if p > 0:
