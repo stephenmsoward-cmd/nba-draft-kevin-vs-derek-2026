@@ -2,10 +2,13 @@ name: Update Championship Odds
 
 on:
   schedule:
-    # 1 AM, 2 AM, 3 AM ET (5, 6, 7 AM UTC) — catches late West Coast games
-    - cron: '0 5 * * *'
-    - cron: '0 6 * * *'
-    - cron: '0 7 * * *'
+    # All times ET (UTC-4 during EDT):
+    - cron: '30 21 * * *'  # 5:30 PM ET  — 1h before first tipoff
+    - cron: '0 1 * * *'    # 9:00 PM ET  — after first wave of games
+    - cron: '0 3 * * *'    # 11:00 PM ET — after second wave / late starts
+    - cron: '0 4 * * *'    # Midnight ET — after overtime / late finishes
+    - cron: '0 5 * * *'    # 1:00 AM ET  — after West Coast late games
+    - cron: '0 6 * * *'    # 2:00 AM ET  — final safety run
   workflow_dispatch:
 
 jobs:
@@ -82,8 +85,9 @@ jobs:
                               # Team name is likely on a nearby preceding line
                               for j in range(i-1, max(i-4, -1), -1):
                                   candidate = lines[j]
-                                  # Team names don't contain digits and are reasonable length
-                                  if candidate and not re.search(r'\d', candidate) and 3 < len(candidate) < 40:
+                                  # Team names are reasonable length and don't look like odds/numbers
+                                  # Allow "76ers" style names — just exclude pure-numeric lines
+                                  if candidate and not re.fullmatch(r'[+-]?\d+', candidate) and 3 < len(candidate) < 40:
                                       odds_str = '100' if line.upper() == 'EVEN' else line
                                       p = american_to_prob(odds_str)
                                       if p > 0:
