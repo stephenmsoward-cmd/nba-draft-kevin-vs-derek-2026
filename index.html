@@ -267,9 +267,9 @@
     }
 
     .draft-table-header {
-      display: grid;
-      grid-template-columns: 36px 80px 1fr 60px;
-      gap: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       padding: 10px 16px;
       border-bottom: 1px solid var(--border);
       font-size: 0.62rem;
@@ -280,10 +280,9 @@
     }
 
     .draft-row {
-      display: grid;
-      grid-template-columns: 36px 80px 1fr 60px;
-      gap: 8px;
+      display: flex;
       align-items: center;
+      gap: 10px;
       padding: 9px 16px;
       border-bottom: 1px solid var(--bg);
       transition: opacity 0.15s;
@@ -294,11 +293,10 @@
     .draft-row.no-playoffs { opacity: 0.2; }
     .draft-row.eliminated .dr-abbr { text-decoration: line-through; }
 
-    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
-    .dr-abbr   { font-size: 0.88rem; font-weight: 800; }
-    .dr-name   { font-size: 0.8rem; color: var(--muted); }
-    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
-    .dr-status { font-size: 0.75rem; font-weight: 700; text-align: right; }
+    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; width: 24px; flex-shrink: 0; }
+    .dr-abbr   { font-size: 0.88rem; font-weight: 800; width: 40px; flex-shrink: 0; }
+    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; flex: 1; }
+    .dr-status { font-size: 0.75rem; font-weight: 700; }
 
     .s-alive { color: var(--green); }
     .s-elim  { color: var(--derek); }
@@ -774,8 +772,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .score-vs { display: none; }
-      .draft-table-header,
-      .draft-row { grid-template-columns: 28px 60px 1fr 50px; gap: 6px; }
+      .draft-row, .draft-table-header { gap: 8px; }
     }
   </style>
 </head>
