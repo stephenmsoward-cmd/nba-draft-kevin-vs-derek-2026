@@ -879,6 +879,12 @@
       white-space: nowrap;
     }
     .swing-text { color: var(--text); flex: 1; }
+    .swing-byline {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-style: italic;
+      white-space: nowrap;
+    }
 
     /* Draft picks + chart side-by-side */
     .draft-chart-wrap {
@@ -1212,85 +1218,15 @@ function calcMaxFinalFour(playerName, sm) {
   return count;
 }
 
-// Expected Final 4 = sum of probabilities that each of player's teams reaches conf finals,
-// given current series state. Uses championship odds as a proxy for team strength, since
-// P(reach conf finals) correlates strongly with championship probability.
-// Approach: per conference, compute P(team X wins R1) and P(X wins R2 | wins R1) using
-// relative championship odds within each matchup. Sum across a player's teams.
-function calcExpectedFinalFour(playerName, sm, oddsMap) {
-  if (!oddsMap) return null;
-  const owned = new Set(DRAFT[playerName]);
-  let expected = 0;
-  for (const conf of ['East','West']) {
-    const r1 = CONF_BRACKET[conf];
-    // P(team wins R1) — factor in current series state
-    const r1Probs = r1.map(({t,b}) => {
-      const w = bracketWinner(t, b, sm);
-      if (w) return { [t]: w===t?1:0, [b]: w===b?1:0 };
-      const s = sm.get([t,b].sort().join('_'));
-      const tW = s ? (s.awayAbbr===t ? s.awayWins : s.homeWins) : 0;
-      const bW = s ? (s.awayAbbr===b ? s.awayWins : s.homeWins) : 0;
-      // Base prob from odds
-      const tO = oddsMap[t] || 0.001, bO = oddsMap[b] || 0.001;
-      let pt = tO / (tO + bO);
-      // Shift based on current wins — each win shifts ~10% toward that team
-      const diff = tW - bW;
-      pt = Math.max(0.02, Math.min(0.98, pt + diff * 0.1));
-      // If either team already at 4 wins, locked
-      if (tW >= 4) { pt = 1; }
-      else if (bW >= 4) { pt = 0; }
-      return { [t]: pt, [b]: 1 - pt };
-    });
-    // P(team in R2 matchup wins) = sum over pairings
-    for (const [i, j] of R2_PAIRS) {
-      const ti = r1[i].t, bi = r1[i].b;
-      const tj = r1[j].t, bj = r1[j].b;
-      // For each team in slot i and j, its prob to reach conf final
-      for (const [teamI, pI] of Object.entries(r1Probs[i])) {
-        if (pI === 0) continue;
-        for (const [teamJ, pJ] of Object.entries(r1Probs[j])) {
-          if (pJ === 0) continue;
-          const iO = oddsMap[teamI] || 0.001, jO = oddsMap[teamJ] || 0.001;
-          const pTeamI_winsR2 = iO / (iO + jO);
-          // If R2 matchup already underway, apply same logic
-          const w2 = bracketWinner(teamI, teamJ, sm);
-          let pWinR2 = pTeamI_winsR2;
-          if (w2 === teamI) pWinR2 = 1;
-          else if (w2 === teamJ) pWinR2 = 0;
-          else {
-            const s2 = sm.get([teamI,teamJ].sort().join('_'));
-            if (s2) {
-              const tiW = s2.awayAbbr===teamI ? s2.awayWins : s2.homeWins;
-              const tjW = s2.awayAbbr===teamJ ? s2.awayWins : s2.homeWins;
-              const diff = tiW - tjW;
-              pWinR2 = Math.max(0.02, Math.min(0.98, pTeamI_winsR2 + diff * 0.1));
-              if (tiW >= 4) pWinR2 = 1;
-              else if (tjW >= 4) pWinR2 = 0;
-            }
-          }
-          // Team reaches conf final if it wins R1 AND wins R2
-          if (owned.has(teamI)) expected += pI * pWinR2;
-          if (owned.has(teamJ)) expected += pJ * (1 - pWinR2);
-        }
-      }
-    }
-  }
-  return expected;
-}
-
 let cachedOddsMap = null;
 
 function renderScoreboard(elim, inPlayoffs, sm) {
   for (const name of ['Kevin','Derek']) {
     const alive = DRAFT[name].filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
     const ff    = sm ? calcMaxFinalFour(name, sm) : '—';
-    const exp   = sm && cachedOddsMap ? calcExpectedFinalFour(name, sm, cachedOddsMap) : null;
     document.getElementById(`${name.toLowerCase()}-count`).textContent = alive;
-    const expHtml = exp !== null
-      ? `<span class="ff-tooltip">${exp.toFixed(1)} exp<span class="ff-ques">?</span><span class="ff-tooltip-text">Expected Final 4 teams: for each matchup, we combine current series score with market championship odds to estimate each team's probability of reaching the Conference Finals, then sum across your teams.</span></span>`
-      : '';
     document.getElementById(`${name.toLowerCase()}-ff`).innerHTML =
-      `<span class="ff-tooltip">${ff} max Final 4<span class="ff-ques">?</span><span class="ff-tooltip-text">Best-case Conference Finals teams if your teams win every remaining series</span></span>${expHtml ? ' &middot; ' + expHtml : ''}`;
+      `<span class="ff-tooltip">(${ff} max Final 4)<span class="ff-ques">?</span><span class="ff-tooltip-text">Best-case Conference Finals teams if your teams win every remaining series</span></span>`;
   }
 }
 
@@ -1299,15 +1235,24 @@ function renderRoundProgress(sm) {
   const el = document.getElementById('round-progress-container');
   if (!sm || !sm.size) { el.innerHTML = ''; return; }
   const roundOrder = ['1st Round','Conf. Semis','Conf. Finals','NBA Finals'];
+  const roundTotals = { '1st Round': 8, 'Conf. Semis': 4, 'Conf. Finals': 2, 'NBA Finals': 1 };
   const groups = {};
-  for (const s of sm.values()) { (groups[s.round] = groups[s.round] || []).push(s); }
-  const activeRound = roundOrder.find(r => groups[r]?.some(s => !s.completed)) || roundOrder[roundOrder.length-1];
+  for (const s of sm.values()) {
+    // ESPN sometimes labels 1st Round series as generic 'Playoffs' — treat as 1st Round
+    const r = (s.round === 'Playoffs') ? '1st Round' : s.round;
+    (groups[r] = groups[r] || []).push(s);
+  }
+  // Active round = first round (in playoff order) that isn't fully complete
+  let activeRound = null;
+  for (const r of roundOrder) {
+    const done = (groups[r] || []).filter(s => s.completed).length;
+    if (done < roundTotals[r]) { activeRound = r; break; }
+  }
+  if (!activeRound) activeRound = 'NBA Finals';
   const series = groups[activeRound] || [];
   const done = series.filter(s => s.completed).length;
-  const total = series.length || (activeRound === '1st Round' ? 8 : activeRound === 'Conf. Semis' ? 4 : activeRound === 'Conf. Finals' ? 2 : 1);
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  // Count games scheduled today
-  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const total = roundTotals[activeRound];
+  const pct = Math.round((done / total) * 100);
   const activeToday = series.filter(s => !s.completed).length;
   el.innerHTML = `<div class="round-progress">
     <span class="rp-label">${activeRound}</span>
@@ -1388,6 +1333,7 @@ function renderBiggestSwing(sm, elim, inPlayoffs) {
   el.innerHTML = `<div class="biggest-swing">
     <span class="swing-label">Biggest swing today</span>
     <span class="swing-text">${text}</span>
+    <span class="swing-byline">— via Spencer</span>
   </div>`;
 }
 
@@ -1411,7 +1357,7 @@ function updateHistory(elim, inPlayoffs) {
 
 function renderRaceChart(hist) {
   const el = document.getElementById('race-chart-container');
-  if (!hist || hist.length < 2) { el.style.display = 'none'; return; }
+  if (!hist || hist.length < 1) { el.style.display = 'none'; return; }
   el.style.display = '';
   const W = 300, H = 180, pad = { t: 10, r: 10, b: 22, l: 22 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
