@@ -1478,13 +1478,11 @@ async function renderLiveGames(events, sm) {
 
       await renderLiveGames(fresh, updatedSm);
 
-      // Only fetch new odds when a game actually finishes
+      // Re-fetch odds file when a game finishes — GitHub Action runs overnight,
+      // but re-reading the file costs nothing and picks up any manual trigger.
       if (gameJustEnded) {
         const freshOdds = await fetchChampionshipOdds();
-        if (freshOdds) {
-          localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
-          renderSideBet(calcSideBet(freshOdds, cachedElim, cachedInPlayoffs), false, null);
-        }
+        if (freshOdds) renderSideBet(calcSideBet(freshOdds, cachedElim, cachedInPlayoffs), false, null);
       }
     }, 30000);
   }
@@ -1577,7 +1575,7 @@ function renderSideBet(result, cached = false, cachedTs = null) {
   const el = document.getElementById('side-bet-container');
   if (!result) {
     el.innerHTML = `<div class="side-bet-card">
-      <div class="sb-unavail">Championship odds unavailable — will show here once ESPN publishes futures data for the playoffs.</div>
+      <div class="sb-unavail">Championship odds unavailable — updated nightly via ESPN.</div>
     </div>`;
     return;
   }
@@ -1648,10 +1646,9 @@ async function loadData() {
   document.getElementById('error-container').innerHTML = '';
 
   try {
-    // Odds are NOT fetched on every page load to conserve API credits.
-    // They're updated automatically when a game ends (via the live ticker below).
-    const [events, liveEvents] = await Promise.all([
-      fetchAll(), fetchLiveGames(),
+    // data/odds.json is a local file updated nightly by GitHub Actions — fast to fetch.
+    const [events, liveEvents, freshOdds] = await Promise.all([
+      fetchAll(), fetchLiveGames(), fetchChampionshipOdds(),
     ]);
     cachedHistoricalEvents = events;
     // Merge live events so series wins reflect completed games today
@@ -1661,30 +1658,12 @@ async function loadData() {
     const inP      = playoffTeams(sm);
     cachedInPlayoffs = inP;
 
-    // Odds: always load from localStorage cache on page load;
-    // fresh fetch only happens when a game ends (in the live refresh timer).
-    let oddsMap = null, oddsCached = false, oddsTs = null;
-    try {
-      const saved = JSON.parse(localStorage.getItem('nba26-odds') || 'null');
-      if (saved?.oddsMap) { oddsMap = saved.oddsMap; oddsCached = true; oddsTs = saved.ts; }
-    } catch {}
-
     renderScoreboard(elim, inP, sm);
-    renderSideBet(calcSideBet(oddsMap, elim, inP), oddsCached, oddsTs);
+    renderSideBet(calcSideBet(freshOdds, elim, inP), false, null);
     renderBracket(sm);
     await renderLiveGames(liveEvents, sm);
     renderMatchups(sm, elim);
     renderTeams(elim, inP);
-
-    // If no cached odds exist at all, do a background fetch after content renders
-    if (!oddsMap) {
-      fetchChampionshipOdds().then(freshOdds => {
-        if (freshOdds) {
-          localStorage.setItem('nba26-odds', JSON.stringify({ oddsMap: freshOdds, ts: Date.now() }));
-          renderSideBet(calcSideBet(freshOdds, cachedElim, cachedInPlayoffs), false, null);
-        }
-      });
-    }
 
     const now = new Date();
     document.getElementById('last-updated').textContent =
