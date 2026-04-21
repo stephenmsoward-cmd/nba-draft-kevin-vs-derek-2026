@@ -264,39 +264,38 @@
       border-radius: 12px;
       overflow: hidden;
       margin-bottom: 40px;
+      max-width: 460px;
+    }
+
+    .draft-table-header,
+    .draft-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 20px;
+      gap: 0;
     }
 
     .draft-table-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
       border-bottom: 1px solid var(--border);
       font-size: 0.62rem;
       font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.08em;
+      padding: 10px 20px;
     }
 
-    .draft-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 16px;
-      border-bottom: 1px solid var(--bg);
-      transition: opacity 0.15s;
-    }
-
+    .draft-row { border-bottom: 1px solid var(--bg); }
     .draft-row:last-child { border-bottom: none; }
     .draft-row.eliminated { opacity: 0.28; }
     .draft-row.no-playoffs { opacity: 0.2; }
     .draft-row.eliminated .dr-abbr { text-decoration: line-through; }
 
-    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; width: 24px; flex-shrink: 0; }
-    .dr-abbr   { font-size: 0.88rem; font-weight: 800; width: 44px; flex-shrink: 0; }
-    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; width: 64px; flex-shrink: 0; }
-    .dr-status { font-size: 0.75rem; font-weight: 700; }
+    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; width: 28px; }
+    .dr-abbr   { font-size: 0.88rem; font-weight: 800; width: 48px; }
+    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; width: 70px; }
+    .dr-status { font-size: 0.75rem; font-weight: 700; width: 80px; text-align: right; }
 
     .s-alive { color: var(--green); }
     .s-elim  { color: var(--derek); }
@@ -772,7 +771,7 @@
         grid-template-columns: 1fr 1fr;
       }
       .score-vs { display: none; }
-      .draft-row, .draft-table-header { gap: 8px; }
+      .draft-table { max-width: 100%; }
     }
   </style>
 </head>
