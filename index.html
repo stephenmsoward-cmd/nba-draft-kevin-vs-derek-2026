@@ -268,7 +268,7 @@
 
     .draft-table-header {
       display: grid;
-      grid-template-columns: 36px 1fr 1fr 70px 60px;
+      grid-template-columns: 36px 80px 1fr 60px;
       gap: 8px;
       padding: 10px 16px;
       border-bottom: 1px solid var(--border);
@@ -281,7 +281,7 @@
 
     .draft-row {
       display: grid;
-      grid-template-columns: 36px 1fr 1fr 70px 60px;
+      grid-template-columns: 36px 80px 1fr 60px;
       gap: 8px;
       align-items: center;
       padding: 9px 16px;
@@ -775,7 +775,7 @@
       }
       .score-vs { display: none; }
       .draft-table-header,
-      .draft-row { grid-template-columns: 28px 1fr 1fr 60px 50px; gap: 6px; }
+      .draft-row { grid-template-columns: 28px 60px 1fr 50px; gap: 6px; }
     }
   </style>
 </head>
@@ -1187,7 +1187,6 @@ function renderTeams(elim, inPlayoffs) {
       <div class="draft-row ${rowCls}">
         <span class="dr-pick">${pick}</span>
         <span class="dr-abbr">${abbr}</span>
-        <span class="dr-name">${TEAM_NAMES[abbr] || ''}</span>
         <span class="dr-owner ${ownerCls_}">${owner}</span>
         <span class="dr-status ${statusCls}">${statusTxt}</span>
       </div>`;
@@ -1198,7 +1197,6 @@ function renderTeams(elim, inPlayoffs) {
       <div class="draft-table-header">
         <span>Pick</span>
         <span>Team</span>
-        <span>Full Name</span>
         <span>Drafter</span>
         <span style="text-align:right">Status</span>
       </div>
