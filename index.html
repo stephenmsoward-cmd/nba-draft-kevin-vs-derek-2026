@@ -270,11 +270,11 @@
 
     .draft-table-header,
     .draft-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 42px 64px 1fr 80px;
       align-items: center;
-      justify-content: space-between;
       padding: 9px 20px;
-      gap: 0;
+      gap: 12px;
     }
 
     .draft-table-header {
@@ -293,10 +293,11 @@
     .draft-row.no-playoffs { opacity: 0.2; }
     .draft-row.eliminated .dr-abbr { text-decoration: line-through; }
 
-    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; width: 28px; }
-    .dr-abbr   { font-size: 0.88rem; font-weight: 800; width: 48px; }
-    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; width: 70px; }
-    .dr-status { font-size: 0.75rem; font-weight: 700; width: 80px; text-align: right; }
+    .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
+    .dr-abbr   { font-size: 0.88rem; font-weight: 800; }
+    .dr-owner  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+    .dr-status { font-size: 0.75rem; font-weight: 700; text-align: right; }
+    .draft-table-header > span:last-child { text-align: right; }
 
     .s-alive { color: var(--green); }
     .s-elim  { color: var(--derek); }
