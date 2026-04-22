@@ -1359,68 +1359,68 @@ function updateClinched(sm) {
 // 2 facts per team for each of the 16 playoff teams.
 const TEAM_FUN_FACTS = {
   OKC: [
-    "Franchise roots trace to the 1967 Seattle SuperSonics — their only NBA title (1979) was earned in Seattle.",
-    "The 2012 OKC roster had Durant, Westbrook, and Harden — all three later won league MVP.",
+    "Franchise started in 1967 Seattle, won a title there in 1979, then skipped town with the trophy. Seattle is still petitioning.",
+    "In 2012 they had Durant, Westbrook, AND Harden on one roster. They traded Harden for salad ingredients. Zero rings followed.",
   ],
   DET: [
-    "Back-to-back champs in 1989 and 1990 — the 'Bad Boys' era turned physical defense into a brand.",
-    "Their 2004 title team beat Shaq and Kobe's Lakers without a single All-Star averaging 19+ points.",
+    "The 'Bad Boys' turned hard fouls into a personality trait. Refs have been undoing their work ever since.",
+    "Their 2004 title team beat Shaq-and-Kobe's Lakers with nobody averaging 19 points. Teamwork nerds cite it in arguments to this day.",
   ],
   BOS: [
-    "18 NBA championships — tied with the Lakers for the most in league history.",
-    "Bill Russell won 11 rings in 13 seasons — more than any player in any major North American sport.",
+    "18 titles — tied with the Lakers for most ever. They will mention this to you. They will not wait to be asked.",
+    "Bill Russell won 11 rings in 13 seasons. That's not a career arc, that's a cheat code someone forgot to patch.",
   ],
   HOU: [
-    "Back-to-back titles in 1994 and 1995 — both won during Michael Jordan's two-year baseball detour.",
-    "Hakeem Olajuwon is the only player ever with 3,000+ career blocks AND 2,000+ career steals.",
+    "Back-to-back titles in 1994 and 1995 — tactfully timed with Michael Jordan's baseball sabbatical. Asterisk truthers, form a line.",
+    "Hakeem Olajuwon is the only player ever with 3,000+ blocks AND 2,000+ steals. He was just farming defensive stats for sport.",
   ],
   MIN: [
-    "Didn't reach a Western Conference Finals until 2024 — 35 seasons into franchise history.",
-    "Drafted Kevin Garnett straight out of high school in 1995 — the first prep-to-pro pick in 20 years.",
+    "Didn't reach a Western Conference Finals until 2024 — 35 seasons of being the NBA's 'wait, they have a team?'",
+    "Drafted Kevin Garnett straight out of high school in 1995 — the first prep-to-pro pick in 20 years, and the last time Minnesota was early on anything.",
   ],
   TOR: [
-    "Only non-U.S. franchise ever to win an NBA championship (2019).",
-    "Pascal Siakam, their 2019 Finals co-star, was a third-round steal at pick #27 in 2016.",
+    "Only non-U.S. franchise to win a title (2019). Canada celebrated politely and apologized to the teams they beat.",
+    "Pascal Siakam was a third-round pick at #27 in 2016. Scouts saw him, shrugged, and went to lunch. He won Finals MVP three years later.",
   ],
   ORL: [
-    "Took Shaquille O'Neal #1 in 1992 and Dwight Howard #1 in 2004 — both later won MVP for other teams.",
-    "Reached the Finals twice (1995, 2009) and never came close to winning either, losing 8 of 9 games.",
+    "Drafted Shaq #1 in 1992 and Dwight Howard #1 in 2004. Both won MVP for other teams. Orlando remains convinced this is normal.",
+    "Two Finals trips, eight losses in nine games. 'Close but no cigar' is actually the polite version.",
   ],
   PHX: [
-    "Most regular-season wins of any franchise without a championship — 0-for-3 in Finals appearances.",
-    "Blew a 2-0 Finals lead to Milwaukee in 2021 — their first trip back to the title round in 28 years.",
+    "Most regular-season wins of any franchise without a title. The Suns have mastered the art of peaking in November.",
+    "Blew a 2-0 Finals lead to Milwaukee in 2021 — their first title trip in 28 years. At this pace, book the next one for 2049.",
   ],
   SAS: [
-    "Five NBA titles, all coached by Gregg Popovich — the longest continuous coach-franchise-ring run ever.",
-    "Landed Tim Duncan (#1 in 1997) and Victor Wembanyama (#1 in 2023) after strategically bad seasons.",
+    "Five titles, all coached by Gregg Popovich. Longest continuous coach-franchise-ring run in NBA history, and easily the grumpiest.",
+    "Landed Duncan (#1, 1997) and Wembanyama (#1, 2023) after suspiciously terrible seasons. The NBA lottery is allegedly random.",
   ],
   DEN: [
-    "First NBA title came in 2023 — 47 years after joining the league in the ABA-NBA merger.",
-    "Nikola Jokić was the 41st pick of the 2014 draft — by far the lowest-drafted MVP in NBA history.",
+    "First NBA title came in 2023 — 47 years after joining the league. They took their sweet mile-high time.",
+    "Nikola Jokić was the 41st pick in 2014, selected while ESPN was airing a Taco Bell ad. Literally. The broadcast missed it.",
   ],
   CLE: [
-    "The 2016 Cavs are the only team ever to come back from a 3-1 Finals deficit (vs. a 73-win Warriors).",
-    "Didn't reach their first Finals until 2007 — 37 seasons after entering the league in 1970.",
+    "Only team ever to come back from 3-1 in the Finals (2016, vs. a 73-win Warriors). Golden State has not been emotionally okay since.",
+    "Didn't reach a Finals until 2007 — 37 years of waiting for LeBron to be born, grow up, and get drafted by them.",
   ],
   NYK: [
-    "Last NBA title came in 1973 — the longest championship drought of any Original-Era franchise.",
-    "Madison Square Garden has been their home since 1968 — four arena renovations, same Manhattan block.",
+    "Last title: 1973. Longest drought of any Original-Era franchise. Ticket prices remain top-five, because of course they do.",
+    "MSG has hosted the Knicks since 1968 — four renovations, same block, same exact ceiling on the season.",
   ],
   ATL: [
-    "Won their only NBA title as the St. Louis Hawks in 1958. Zero titles in Atlanta since moving in 1968.",
-    "Franchise traces back to 1946 as the Tri-Cities Blackhawks — originally played in Moline, Illinois.",
+    "Won their only title as the St. Louis Hawks in 1958. Atlanta has since contributed zero titles and a lot of empty arena footage.",
+    "Franchise started in 1946 in Moline, Illinois. They've done more relocating than winning, and the relocating isn't even close.",
   ],
   LAL: [
-    "17 NBA titles — tied with Boston for most ever, split between the Minneapolis and Los Angeles eras.",
-    "Won 33 straight games in the 1971-72 season — still the longest win streak in U.S. pro sports.",
+    "17 titles split between Minneapolis and LA. Lakers fans call every decade 'their decade' and the math somehow checks out.",
+    "Won 33 straight games in 1971-72 — still the longest streak in U.S. pro sports. Even they can't explain how.",
   ],
   PHI: [
-    "Swept the Lakers 4-0 in the 1983 Finals — Moses Malone's 'Fo, Fo, Fo' prophecy nearly came true.",
-    "Allen Iverson's crossover on Michael Jordan in 1997 remains one of the most replayed plays in NBA history.",
+    "Swept the Lakers 4-0 in the 1983 Finals — Moses Malone's 'Fo, Fo, Fo' prophecy missed by a single game. Still the best bad prediction in NBA history.",
+    "Allen Iverson's 1997 crossover on Michael Jordan gets replayed more than most Netflix shows. MJ has still never publicly acknowledged it.",
   ],
   POR: [
-    "Drafted Sam Bowie #2 overall in 1984 — one pick before Chicago took some guy named Michael Jordan.",
-    "Only NBA championship came in 1977, led by a Bill Walton team that overcame a 2-0 Finals deficit.",
+    "Drafted Sam Bowie #2 in 1984 — one pick before Chicago took some guy named Jordan. They've been explaining that decision for 40 years and counting.",
+    "Only title came in 1977, led by Bill Walton. Walton's feet have filed their own retirement papers several times since.",
   ],
 };
 
@@ -1464,13 +1464,65 @@ function gameStakes(aA, hA, sm) {
   return { score, aW, hW, game, leader };
 }
 
+// Each template returns an array of variants so consecutive days never repeat.
+const SPENCER_TEMPLATES = {
+  game1: (c) => [
+    `${c.aA} at ${c.hA}, Game 1. Home court sets the tone in the playoffs — ${c.hA} wins tonight and grabs early series control.`,
+    `Series opener, ${c.aA} at ${c.hA}. First-game jitters favor the host — ${c.hA} wins a gritty, low-scoring slog.`,
+    `${c.aA} at ${c.hA}, Game 1. Tape-heavy openers reward the prepared team — ${c.hA} executes the script and takes it by 8+.`,
+  ],
+  elim: (c) => [
+    `${c.trailing} faces elimination against ${c.leader}. Desperation buys one game, not four — ${c.leader} closes it out tonight.`,
+    `${c.leader} has the closeout look. ${c.trailing}'s season ends tonight, probably in the fourth quarter.`,
+    `${c.leader} up 3-${c.trailW} and closing teams don't blink. Book it — ${c.leader} finishes the job.`,
+  ],
+  pivot22: (c) => [
+    `${c.aA} vs ${c.hA} tied 2-2 — effectively a best-of-three now. Game 5 winners take the series 82% of the time, and ${c.hA} grabs it tonight.`,
+    `Series knotted at 2-2, back in ${c.hA}. Game 5 on home floor is where this series flips — ${c.hA} takes a 3-2 lead.`,
+    `2-2 swing game at ${c.hA}. Home crowd plus a full rest day — ${c.hA} wins it and heads to Game 6 up.`,
+  ],
+  tied11: (c) => [
+    `Series knotted 1-1, ${c.aA} at ${c.hA}. Game 3 is the momentum pivot — ${c.hA} protects home court and flips the series lead.`,
+    `Game 3 at ${c.hA}, tied 1-1. Crowd energy swings this one — ${c.hA} takes control early and never looks back.`,
+    `${c.hA} gets its first home game of the series. Expect a loud start, a double-digit lead, and a ${c.hA} W.`,
+  ],
+  lead21: (c) => [
+    `${c.leader} up 2-1 heading into Game 4. ${c.trailing} has to hold serve or it's effectively over — ${c.trailing} survives tonight to force 2-2.`,
+    `${c.leader} leads 2-1 but travels to ${c.trailing}. Down 3-1 is 95% death, so ${c.trailing} plays like it and grinds out a home win.`,
+    `Game 4 at ${c.trailing}. Their season is on the table — expect a desperate start and a ${c.trailing} W to level it.`,
+  ],
+  lead20: (c) => [
+    `${c.leader} up 2-0 on ${c.trailing}. Teams down 2-0 win the series just 6% of the time — ${c.trailing} steals one at home to avoid the sweep scare.`,
+    `${c.trailing} finally gets a home crowd. Expect a bounce-back W and a 2-1 series heading into Game 4.`,
+    `Down 2-0, headed home, fighting for life. ${c.trailing} wins a close one to reset the series.`,
+  ],
+  stole1: (c) => [
+    `${c.leader} stole Game 1. Expect ${c.trailing} to answer back at home and even the series 1-1 before the road trip.`,
+    `${c.leader} took Game 1 on the road. ${c.trailing} corrects the rotation, cleans up turnovers, and wins Game 2 comfortably.`,
+    `Home teams rarely go down 0-2. ${c.trailing} responds tonight and ties the series up.`,
+  ],
+  fallback: (c) => [
+    `${c.aA} at ${c.hA}, Game ${c.game}. ${c.leaderLabel} — ${c.pick} takes this one by double digits.`,
+    `${c.aA} at ${c.hA}, Game ${c.game}. ${c.pick} controls the tempo and wins going away.`,
+    `${c.aA} at ${c.hA}, Game ${c.game}. Expect a tight third quarter and a ${c.pick} pull-away down the stretch.`,
+  ],
+};
+
 function spencerPrediction(liveEvents, sm) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const storageKey = 'nba26-spencer';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
+  const todayEntry = history.find(h => h.date === today);
+  if (todayEntry) return todayEntry.text;  // locked for the day
+
   if (!liveEvents?.length) return null;
-  // Skip games already finished — predictions are for upcoming/live games only
-  const upcoming = liveEvents.filter(ev => ev.competitions?.[0]?.status?.type?.state !== 'post');
-  if (!upcoming.length) return null;
+  // Only generate when there's a pre-game or live game to predict against.
+  const nonPost = liveEvents.filter(ev => ev.competitions?.[0]?.status?.type?.state !== 'post');
+  if (!nonPost.length) return null;
+
   let best = null;
-  for (const ev of upcoming) {
+  for (const ev of nonPost) {
     const mu = gameMatchup(ev);
     if (!mu) continue;
     const st = gameStakes(mu.aA, mu.hA, sm);
@@ -1481,25 +1533,34 @@ function spencerPrediction(liveEvents, sm) {
   const { aW, hW, game, leader } = best.st;
   const trailing = leader ? (leader === aA ? hA : aA) : null;
   const leadW = Math.max(aW, hW), trailW = Math.min(aW, hW);
-  let pred;
-  if (aW === 0 && hW === 0) {
-    pred = `${aA} at ${hA}, Game 1. Home court sets the tone in the playoffs — ${hA} wins tonight and grabs early series control.`;
-  } else if (leadW === 3) {
-    pred = `${trailing} faces elimination against ${leader}. Desperation buys one game, not four — ${leader} closes it out tonight.`;
-  } else if (leadW === 2 && trailW === 2) {
-    pred = `${aA} vs ${hA} tied 2-2 — effectively a best-of-three now. Game 5 winners take the series 82% of the time, and ${leader || hA} grabs it tonight.`;
-  } else if (leadW === 1 && trailW === 1) {
-    pred = `Series knotted 1-1, ${aA} at ${hA}. Game 3 is the momentum pivot — ${hA} protects home court and flips the series lead.`;
-  } else if (leadW === 2 && trailW === 1) {
-    pred = `${leader} up 2-1 heading into Game 4. ${trailing} has to hold serve here or it's over — ${trailing} survives tonight to force a 2-2 split.`;
-  } else if (leadW === 2 && trailW === 0) {
-    pred = `${leader} up 2-0 on ${trailing}. Teams down 2-0 win the series just 6% of the time — ${trailing} steals one at home to avoid the sweep scare.`;
-  } else if (leadW === 1 && trailW === 0 && game === 2) {
-    pred = `${leader} stole Game 1. Expect ${trailing} to answer back at home and even the series 1-1 before the road trip.`;
-  } else {
-    pred = `${aA} at ${hA}, Game ${game}. ${leader ? leader + ' leads ' + leadW + '-' + trailW : 'Series tied'} — ${leader || hA} takes this one by double digits.`;
+  const pick = leader || hA;
+  const leaderLabel = leader ? `${leader} leads ${leadW}-${trailW}` : 'Series tied';
+
+  let templateId;
+  if (aW === 0 && hW === 0) templateId = 'game1';
+  else if (leadW === 3) templateId = 'elim';
+  else if (leadW === 2 && trailW === 2) templateId = 'pivot22';
+  else if (leadW === 1 && trailW === 1) templateId = 'tied11';
+  else if (leadW === 2 && trailW === 1) templateId = 'lead21';
+  else if (leadW === 2 && trailW === 0) templateId = 'lead20';
+  else if (leadW === 1 && trailW === 0 && game === 2) templateId = 'stole1';
+  else templateId = 'fallback';
+
+  const ctx = { aA, hA, leader, trailing, leadW, trailW, game, pick, leaderLabel };
+  const variants = SPENCER_TEMPLATES[templateId](ctx);
+  const prior = history[0];
+
+  // Default: deterministic by date so refresh doesn't flicker the pick.
+  let idx = hashStr(today + templateId) % variants.length;
+  // If yesterday used the same template, force a different variant.
+  if (prior && prior.templateId === templateId && variants.length > 1) {
+    idx = (prior.variantIdx + 1) % variants.length;
   }
-  return pred;
+  const text = variants[idx];
+
+  const updated = [{ date: today, templateId, variantIdx: idx, text }, ...history].slice(0, 14);
+  try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
+  return text;
 }
 
 function kabeerFactPick(liveEvents, sm, upcoming) {
