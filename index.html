@@ -1051,10 +1051,6 @@
   <div class="section-header">
     <span class="section-title">Playoff Series</span>
     <div class="section-line"></div>
-    <div class="view-toggle">
-      <button class="toggle-btn active" id="tab-bracket" onclick="switchTab('bracket')">Bracket</button>
-      <button class="toggle-btn" id="tab-series" onclick="switchTab('series')">Series</button>
-    </div>
   </div>
 
   <div id="view-bracket">
@@ -1081,12 +1077,6 @@
       <div id="bracket-container">
         <div class="loading-msg" style="min-width:700px">Loading bracket…</div>
       </div>
-    </div>
-  </div>
-
-  <div id="view-series" style="display:none">
-    <div id="matchups-container">
-      <div class="loading-msg">Fetching playoff data…</div>
     </div>
   </div>
 
@@ -1803,14 +1793,6 @@ function renderTeams(elim, inPlayoffs) {
     </div>`;
 }
 
-// ── Tab toggle ────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.getElementById('view-bracket').style.display = tab === 'bracket' ? '' : 'none';
-  document.getElementById('view-series').style.display  = tab === 'series'  ? '' : 'none';
-  document.getElementById('tab-bracket').classList.toggle('active', tab === 'bracket');
-  document.getElementById('tab-series').classList.toggle('active',  tab === 'series');
-}
-
 // ── Bracket ───────────────────────────────────────────────────────────
 // Bracket order matches actual NBA bracket (top → bottom per conference)
 const CONF_BRACKET = {
@@ -2344,7 +2326,6 @@ async function loadData() {
     // If no games today, look at tomorrow's slate so Kabeer can pick a relevant team
     const upcomingForDesk = liveEvents.length ? null : await findUpcomingGames(3);
     renderDesk(liveEvents, sm, upcomingForDesk);
-    renderMatchups(sm, elim);
     renderTeams(elim, inP);
     const hist = updateHistory(elim, inP);
     renderRaceChart(hist);
@@ -2372,7 +2353,6 @@ async function loadData() {
         const elim = new Set(c.elim);
         const inP  = new Set(c.inPlayoffs);
         renderScoreboard(elim, inP, sm);
-        renderMatchups(sm, elim);
         renderTeams(elim, inP);
         const ago = Math.round((Date.now() - c.ts) / 60000);
         document.getElementById('last-updated').textContent = `Cached data (${ago}m ago)`;
