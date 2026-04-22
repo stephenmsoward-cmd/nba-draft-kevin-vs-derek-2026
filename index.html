@@ -1490,21 +1490,21 @@ function spencerPrediction(liveEvents, sm) {
   const leadW = Math.max(aW, hW), trailW = Math.min(aW, hW);
   let pred;
   if (aW === 0 && hW === 0) {
-    pred = `${aA} at ${hA}, Game 1 tonight. Home court matters more in the playoffs than any other round — watch who sets the tone in the first 6 minutes.`;
+    pred = `${aA} at ${hA}, Game 1. Home court sets the tone in the playoffs — ${hA} wins tonight and grabs early series control.`;
   } else if (leadW === 3) {
-    pred = `${trailing} faces elimination tonight against ${leader}. Down 3-${trailW}, desperation basketball is their only card left — expect a gritty start.`;
+    pred = `${trailing} faces elimination against ${leader}. Desperation buys one game, not four — ${leader} closes it out tonight.`;
   } else if (leadW === 2 && trailW === 2) {
-    pred = `${aA} vs ${hA} tied 2-2 — effectively a best-of-three now. Whoever takes Game 5 wins the series 82% of the time historically.`;
+    pred = `${aA} vs ${hA} tied 2-2 — effectively a best-of-three now. Game 5 winners take the series 82% of the time, and ${leader || hA} grabs it tonight.`;
   } else if (leadW === 1 && trailW === 1) {
-    pred = `Series knotted 1-1, ${aA} at ${hA}. Game 3 is the momentum pivot — a home win here usually snowballs into a series lead.`;
+    pred = `Series knotted 1-1, ${aA} at ${hA}. Game 3 is the momentum pivot — ${hA} protects home court and flips the series lead.`;
   } else if (leadW === 2 && trailW === 1) {
-    pred = `${leader} up 2-1 heading into Game 4. A 3-1 lead is nearly unbeatable — ${trailing} has to hold serve or start printing golf tee times.`;
+    pred = `${leader} up 2-1 heading into Game 4. ${trailing} has to hold serve here or it's over — ${trailing} survives tonight to force a 2-2 split.`;
   } else if (leadW === 2 && trailW === 0) {
-    pred = `${leader} up 2-0 on ${trailing}. Teams down 2-0 win the series just 6% of the time — tonight is a must-win for ${trailing}.`;
+    pred = `${leader} up 2-0 on ${trailing}. Teams down 2-0 win the series just 6% of the time — ${trailing} steals one at home to avoid the sweep scare.`;
   } else if (leadW === 1 && trailW === 0 && game === 2) {
-    pred = `${leader} stole Game 1 — can they double up, or does ${trailing} answer back at home to even the series?`;
+    pred = `${leader} stole Game 1. Expect ${trailing} to answer back at home and even the series 1-1 before the road trip.`;
   } else {
-    pred = `${aA} at ${hA}, Game ${game}. ${leader ? leader + ' leads ' + leadW + '-' + trailW : 'Series tied'} — every possession matters from here.`;
+    pred = `${aA} at ${hA}, Game ${game}. ${leader ? leader + ' leads ' + leadW + '-' + trailW : 'Series tied'} — ${leader || hA} takes this one by double digits.`;
   }
   return pred;
 }
