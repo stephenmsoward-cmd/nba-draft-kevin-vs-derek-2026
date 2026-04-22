@@ -138,6 +138,79 @@
     .score-player.kevin .player-count { color: var(--kevin); }
     .score-player.derek .player-count { color: var(--derek); }
 
+    /* Hall of Fame */
+    .hall-of-fame {
+      margin-top: -24px;
+      margin-bottom: 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+    }
+    .hof-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+    .hof-summary strong { color: var(--text); }
+    .hof-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+    .hof-toggle:hover { color: var(--text); border-color: var(--text-dim); }
+    .hof-body {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .hof-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .hof-table th, .hof-table td {
+      padding: 7px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .hof-table th {
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+    }
+    .hof-table td.year { font-weight: 700; width: 56px; }
+    .hof-table td.team { width: 64px; color: var(--text-dim); }
+    .hof-table td.unpaid { color: #ef4444; font-style: italic; }
+    .hof-table tr.defending td { background: rgba(34, 197, 94, 0.08); }
+    .hof-winner-kevin { color: var(--kevin); font-weight: 600; }
+    .hof-winner-derek { color: var(--derek); font-weight: 600; }
+    .hof-stats {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+    .hof-stats strong { color: var(--text); }
+    .hof-paid-note { color: var(--text-dim); font-size: 0.72rem; margin-left: 4px; }
+
     .score-player .player-label {
       font-size: 0.72rem;
       color: var(--muted);
@@ -1029,6 +1102,8 @@
       <div class="player-ff" id="derek-ff"></div>
     </div>
   </div>
+
+  <div id="hall-of-fame" class="hall-of-fame"></div>
 
   <div class="section-header">
     <span class="section-title">Side Bet — Stephen vs. Nathaniel</span>
@@ -2425,6 +2500,101 @@ async function loadData() {
   }
 }
 
+// ── Hall of Fame ──────────────────────────────────────────────────────
+const HOF_HISTORY = [
+  { year: 2025, winner: 'Kevin', team: 'OKC', dinner: null, paid: false },
+  { year: 2024, winner: 'Kevin', team: 'BOS', dinner: null, paid: false },
+  { year: 2023, winner: 'Kevin', team: 'DEN', dinner: null, paid: false },
+  { year: 2022, winner: 'Kevin', team: 'GSW', dinner: null, paid: false },
+  { year: 2021, winner: 'Kevin', team: 'MIL', dinner: null, paid: false },
+  { year: 2020, winner: 'Kevin', team: 'LAL', dinner: null, paid: false },
+  { year: 2019, winner: 'Kevin', team: 'TOR', dinner: 'Joo Ok (K-Town)', paid: true, paidNote: 'paid 2025' },
+  { year: 2018, winner: 'Kevin', team: 'GSW', dinner: 'New York',          paid: true },
+  { year: 2017, winner: 'Derek', team: 'GSW', dinner: 'New York',          paid: true },
+  { year: 2016, winner: 'Kevin', team: 'CLE', dinner: 'London',            paid: true },
+  { year: 2015, winner: 'Kevin', team: 'GSW', dinner: null,                paid: false },
+  { year: 2014, winner: 'Derek', team: 'SAS', dinner: 'Venice',            paid: true },
+  { year: 2013, winner: 'Kevin', team: 'MIA', dinner: "Ruth's Chris (Seattle)", paid: true },
+];
+
+function renderHallOfFame() {
+  const el = document.getElementById('hall-of-fame');
+  if (!el) return;
+  const totals = { Kevin: 0, Derek: 0 };
+  HOF_HISTORY.forEach(h => totals[h.winner]++);
+  const defending = HOF_HISTORY[0];
+  const unpaidList = HOF_HISTORY.filter(h => !h.paid);
+  const unpaidCount = unpaidList.length;
+  const lastPaid = HOF_HISTORY.find(h => h.paid);
+  const dinnerCounts = {};
+  HOF_HISTORY.forEach(h => { if (h.dinner) dinnerCounts[h.dinner] = (dinnerCounts[h.dinner] || 0) + 1; });
+  let topDinner = null, topCount = 0;
+  for (const [d, c] of Object.entries(dinnerCounts)) { if (c > topCount) { topDinner = d; topCount = c; } }
+  const repeatTeams = {};
+  HOF_HISTORY.forEach(h => { repeatTeams[h.team] = (repeatTeams[h.team] || 0) + 1; });
+
+  const expanded = localStorage.getItem('nba26-hof-open') === '1';
+
+  const defendCls = defending.winner === 'Kevin' ? 'hof-winner-kevin' : 'hof-winner-derek';
+  const summaryHTML = `
+    <div class="hof-summary">
+      <div>
+        🏆 <strong>Kevin ${totals.Kevin}–${totals.Derek} Derek</strong> all-time ·
+        Defending: <span class="${defendCls}">${defending.winner}</span> (${defending.team}, ${defending.year}) ·
+        Derek's unpaid tab: <strong>${unpaidCount}</strong> dinner${unpaidCount === 1 ? '' : 's'}${unpaidCount >= 5 ? ' 👀' : ''}
+      </div>
+      <button class="hof-toggle" onclick="toggleHallOfFame()">Hall of Fame ${expanded ? '▴' : '▾'}</button>
+    </div>
+  `;
+
+  let bodyHTML = '';
+  if (expanded) {
+    const rows = HOF_HISTORY.map((h, i) => {
+      const cls = i === 0 ? 'defending' : '';
+      const winCls = h.winner === 'Kevin' ? 'hof-winner-kevin' : 'hof-winner-derek';
+      const crown = i === 0 ? ' 👑' : '';
+      const repeatMark = repeatTeams[h.team] > 1 ? ` <span style="color:var(--text-dim);font-size:0.72rem">×${repeatTeams[h.team]}</span>` : '';
+      const dinnerCell = h.paid
+        ? `${h.dinner}${h.paidNote ? ` <span class="hof-paid-note">(${h.paidNote})</span>` : ''}`
+        : `<span class="unpaid">unpaid</span>`;
+      return `<tr class="${cls}">
+        <td class="year">${h.year}</td>
+        <td class="${winCls}">${h.winner}${crown}</td>
+        <td class="team">${h.team}${repeatMark}</td>
+        <td>${dinnerCell}</td>
+      </tr>`;
+    }).join('');
+
+    const lastPaidStr = lastPaid
+      ? `${lastPaid.dinner}${lastPaid.paidNote ? ` (${lastPaid.paidNote})` : ` (${lastPaid.year})`}`
+      : '—';
+
+    bodyHTML = `
+      <div class="hof-body">
+        <table class="hof-table">
+          <thead><tr><th>Year</th><th>Winner</th><th>Team</th><th>Dinner</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="hof-stats">
+          <div>Settled: <strong>${HOF_HISTORY.length - unpaidCount}</strong></div>
+          <div>Outstanding: <strong>${unpaidCount}</strong></div>
+          ${topDinner ? `<div>Most frequent: <strong>${topDinner}</strong>${topCount > 1 ? ` (${topCount}×)` : ''}</div>` : ''}
+          <div>Last paid: <strong>${lastPaidStr}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  el.innerHTML = summaryHTML + bodyHTML;
+}
+
+function toggleHallOfFame() {
+  const open = localStorage.getItem('nba26-hof-open') === '1';
+  localStorage.setItem('nba26-hof-open', open ? '0' : '1');
+  renderHallOfFame();
+}
+
+renderHallOfFame();
 loadData();
 </script>
 </body>
