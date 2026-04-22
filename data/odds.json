@@ -1,6 +1,6 @@
 {
-  "ts": 1776848869624,
-  "updatedAt": "2026-04-22T09:07:49.624059+00:00",
+  "ts": 1776852363220,
+  "updatedAt": "2026-04-22T10:06:03.220647+00:00",
   "source": "espn-futures-page",
   "probs": {
     "Oklahoma City Thunder": 0.5454545454545454,
@@ -10,7 +10,7 @@
     "Cleveland Cavaliers": 0.06666666666666667,
     "New York Knicks": 0.043478260869565216,
     "Detroit Pistons": 0.034482758620689655,
-    "Los Angeles Lakers": 0.017857142857142856,
+    "Los Angeles Lakers": 0.027777777777777776,
     "Minnesota Timberwolves": 0.012345679012345678,
     "Atlanta Hawks": 0.009900990099009901,
     "Philadelphia 76ers": 0.006622516556291391,
