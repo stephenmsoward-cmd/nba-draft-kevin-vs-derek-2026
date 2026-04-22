@@ -860,31 +860,68 @@
     }
 
     /* Biggest swing */
-    .biggest-swing {
-      background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(59,130,246,0.05));
-      border: 1px solid rgba(34,197,94,0.3);
-      border-radius: 10px;
-      padding: 10px 14px;
-      margin-bottom: 18px;
+    /* The Desk — daily commentary */
+    .desk-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .desk-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .desk-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      font-weight: 900;
       font-size: 0.82rem;
+      color: #fff;
+      flex-shrink: 0;
     }
-    .swing-label {
+    .desk-avatar.spencer { background: linear-gradient(135deg, #22c55e, #3b82f6); }
+    .desk-avatar.kabeer  { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    .desk-body { flex: 1; min-width: 0; }
+    .desk-head {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .desk-name {
       font-size: 0.6rem;
       font-weight: 800;
-      color: var(--green);
-      text-transform: uppercase;
       letter-spacing: 0.08em;
-      white-space: nowrap;
+      text-transform: uppercase;
+      color: var(--text);
     }
-    .swing-text { color: var(--text); flex: 1; }
-    .swing-byline {
-      font-size: 0.68rem;
+    .desk-topic {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       color: var(--muted);
+    }
+    .desk-quote {
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.4;
       font-style: italic;
-      white-space: nowrap;
+    }
+    .desk-quote::before { content: '\201C'; opacity: 0.55; margin-right: 1px; }
+    .desk-quote::after  { content: '\201D'; opacity: 0.55; margin-left: 1px; }
+
+    @media (max-width: 560px) {
+      .desk-grid { grid-template-columns: 1fr; }
     }
 
     /* Draft picks + chart side-by-side */
@@ -1006,6 +1043,8 @@
     <div class="no-games-msg">Loading…</div>
   </div>
 
+  <div id="desk-container"></div>
+
   <div class="section-header">
     <span class="section-title">Playoff Series</span>
     <div class="section-line"></div>
@@ -1017,7 +1056,6 @@
 
   <div id="view-bracket">
     <div id="round-progress-container"></div>
-    <div id="biggest-swing-container"></div>
     <div class="bracket-outer">
       <div class="bracket-conf-names">
         <div class="bcn-conf">Eastern Conference</div>
@@ -1320,75 +1358,214 @@ function updateClinched(sm) {
   return new Set(Object.keys(store));
 }
 
-// ── Biggest swing of the day ──────────────────────────────────────────
-// Snapshots alive counts at start of day, then compares to current state.
-const SWING_KEY = 'nba26-daystart';
-function renderBiggestSwing(sm, elim, inPlayoffs) {
-  const el = document.getElementById('biggest-swing-container');
-  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-  let snap = null;
-  try { snap = JSON.parse(localStorage.getItem(SWING_KEY) || 'null'); } catch {}
-  // Rotate snapshot at day boundary
-  if (!snap || snap.day !== todayET) {
-    snap = {
-      day: todayET,
-      series: [...sm.entries()].map(([k, s]) => [k, { awayWins: s.awayWins, homeWins: s.homeWins, completed: s.completed }]),
-    };
-    localStorage.setItem(SWING_KEY, JSON.stringify(snap));
-    el.innerHTML = '';
-    return;
-  }
-  // Find series with biggest state change today
-  const snapMap = new Map(snap.series);
-  let best = null;
-  for (const [k, s] of sm.entries()) {
-    const prev = snapMap.get(k);
-    if (!prev) continue;
-    const gamesPlayed = (s.awayWins + s.homeWins) - (prev.awayWins + prev.homeWins);
-    if (gamesPlayed <= 0) continue;
-    const score = (s.completed && !prev.completed ? 100 : 0) + gamesPlayed * 10;
-    if (!best || score > best.score) best = { score, s, prev };
-  }
-  if (!best) { el.innerHTML = ''; return; }
-  const { s, prev } = best;
-  const aA = s.awayAbbr, hA = s.homeAbbr;
-  const aW = s.awayWins, hW = s.homeWins;
-  const pAW = prev.awayWins, pHW = prev.homeWins;
-  const aGain = aW - pAW, hGain = hW - pHW;
+// ── The Desk ─────────────────────────────────────────────────────────
+// Two cards of daily commentary: Spencer's Prediction (forward-looking
+// take on the day's highest-stakes game) and Kabeer's Fun Fact (punchy
+// trivia about a team in action today or playing next). Hidden when empty.
 
-  let text;
-  if (s.completed && !prev.completed) {
-    // Series just wrapped up
-    const [winner, loser, wW, lW] = aW >= 4 ? [aA, hA, aW, hW] : [hA, aA, hW, aW];
-    text = `${winner} closes out ${loser} to advance, ${wW}–${lW}`;
-  } else {
-    const teamWon = aGain > hGain ? aA : hGain > aGain ? hA : null;
-    if (!teamWon) {
-      // Both won same number — show current standings
-      text = aW > hW ? `${aA} leads ${aW}–${hW}` : hW > aW ? `${hA} leads ${hW}–${aW}` : `${aA} and ${hA} are tied ${aW}–${hW}`;
-    } else {
-      const teamLost = teamWon === aA ? hA : aA;
-      const wW = teamWon === aA ? aW : hW;
-      const lW = teamWon === aA ? hW : aW;
-      const prevWW = teamWon === aA ? pAW : pHW;
-      const prevLW = teamWon === aA ? pHW : pAW;
-      if (wW === lW) {
-        text = `${teamWon} beats ${teamLost} to tie the series ${wW}–${lW}`;
-      } else if (wW > lW && prevWW <= prevLW) {
-        text = prevWW === prevLW
-          ? `${teamWon} beats ${teamLost} to take the series lead ${wW}–${lW}`
-          : `${teamWon} flips the series — now leads ${teamLost} ${wW}–${lW}`;
-      } else if (wW > lW) {
-        text = `${teamWon} extends the lead over ${teamLost}, now up ${wW}–${lW}`;
-      } else {
-        text = `${teamWon} beats ${teamLost} to cut the deficit to ${lW}–${wW}`;
-      }
-    }
+// 2 facts per team for each of the 16 playoff teams.
+const TEAM_FUN_FACTS = {
+  OKC: [
+    "Franchise roots trace to the 1967 Seattle SuperSonics — their only NBA title (1979) was earned in Seattle.",
+    "The 2012 OKC roster had Durant, Westbrook, and Harden — all three later won league MVP.",
+  ],
+  DET: [
+    "Back-to-back champs in 1989 and 1990 — the 'Bad Boys' era turned physical defense into a brand.",
+    "Their 2004 title team beat Shaq and Kobe's Lakers without a single All-Star averaging 19+ points.",
+  ],
+  BOS: [
+    "18 NBA championships — tied with the Lakers for the most in league history.",
+    "Bill Russell won 11 rings in 13 seasons — more than any player in any major North American sport.",
+  ],
+  HOU: [
+    "Back-to-back titles in 1994 and 1995 — both won during Michael Jordan's two-year baseball detour.",
+    "Hakeem Olajuwon is the only player ever with 3,000+ career blocks AND 2,000+ career steals.",
+  ],
+  MIN: [
+    "Didn't reach a Western Conference Finals until 2024 — 35 seasons into franchise history.",
+    "Drafted Kevin Garnett straight out of high school in 1995 — the first prep-to-pro pick in 20 years.",
+  ],
+  TOR: [
+    "Only non-U.S. franchise ever to win an NBA championship (2019).",
+    "Pascal Siakam, their 2019 Finals co-star, was a third-round steal at pick #27 in 2016.",
+  ],
+  ORL: [
+    "Took Shaquille O'Neal #1 in 1992 and Dwight Howard #1 in 2004 — both later won MVP for other teams.",
+    "Reached the Finals twice (1995, 2009) and never came close to winning either, losing 8 of 9 games.",
+  ],
+  PHX: [
+    "Most regular-season wins of any franchise without a championship — 0-for-3 in Finals appearances.",
+    "Blew a 2-0 Finals lead to Milwaukee in 2021 — their first trip back to the title round in 28 years.",
+  ],
+  SAS: [
+    "Five NBA titles, all coached by Gregg Popovich — the longest continuous coach-franchise-ring run ever.",
+    "Landed Tim Duncan (#1 in 1997) and Victor Wembanyama (#1 in 2023) after strategically bad seasons.",
+  ],
+  DEN: [
+    "First NBA title came in 2023 — 47 years after joining the league in the ABA-NBA merger.",
+    "Nikola Jokić was the 41st pick of the 2014 draft — by far the lowest-drafted MVP in NBA history.",
+  ],
+  CLE: [
+    "The 2016 Cavs are the only team ever to come back from a 3-1 Finals deficit (vs. a 73-win Warriors).",
+    "Didn't reach their first Finals until 2007 — 37 seasons after entering the league in 1970.",
+  ],
+  NYK: [
+    "Last NBA title came in 1973 — the longest championship drought of any Original-Era franchise.",
+    "Madison Square Garden has been their home since 1968 — four arena renovations, same Manhattan block.",
+  ],
+  ATL: [
+    "Won their only NBA title as the St. Louis Hawks in 1958. Zero titles in Atlanta since moving in 1968.",
+    "Franchise traces back to 1946 as the Tri-Cities Blackhawks — originally played in Moline, Illinois.",
+  ],
+  LAL: [
+    "17 NBA titles — tied with Boston for most ever, split between the Minneapolis and Los Angeles eras.",
+    "Won 33 straight games in the 1971-72 season — still the longest win streak in U.S. pro sports.",
+  ],
+  PHI: [
+    "Swept the Lakers 4-0 in the 1983 Finals — Moses Malone's 'Fo, Fo, Fo' prophecy nearly came true.",
+    "Allen Iverson's crossover on Michael Jordan in 1997 remains one of the most replayed plays in NBA history.",
+  ],
+  POR: [
+    "Drafted Sam Bowie #2 overall in 1984 — one pick before Chicago took some guy named Michael Jordan.",
+    "Only NBA championship came in 1977, led by a Bill Walton team that overcame a 2-0 Finals deficit.",
+  ],
+};
+
+// djb2-style string hash → non-negative int
+function hashStr(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// Extract a game's matchup from a scoreboard event
+function gameMatchup(ev) {
+  const comp = ev.competitions?.[0];
+  if (!comp) return null;
+  const cs = comp.competitors || [];
+  const away = cs.find(c => c.homeAway === 'away') || cs[0];
+  const home = cs.find(c => c.homeAway === 'home') || cs[1];
+  if (!away || !home) return null;
+  return { aA: norm(away.team?.abbreviation), hA: norm(home.team?.abbreviation) };
+}
+
+// Score a game's "stakes" for prediction selection
+function gameStakes(aA, hA, sm) {
+  const key = [aA, hA].sort().join('_');
+  const s = sm.get(key);
+  const aW = s ? (s.awayAbbr === aA ? s.awayWins : s.homeWins) : 0;
+  const hW = s ? (s.awayAbbr === hA ? s.awayWins : s.homeWins) : 0;
+  const game = aW + hW + 1;
+  const leader = aW > hW ? aA : hW > aW ? hA : null;
+  const leadW = Math.max(aW, hW);
+  const trailW = Math.min(aW, hW);
+  let score = 0;
+  if (leadW === 3) score = 120;              // closeout / elimination game
+  else if (leadW === 2 && trailW === 2) score = 100; // 2-2 pivot
+  else if (leadW === 2 && game === 5)    score = 60;
+  else if (leadW === 2 && trailW === 1)  score = 55;  // Game 4
+  else if (leadW === 2 && trailW === 0)  score = 50;  // 2-0
+  else if (leadW === 1 && trailW === 1)  score = 70;  // series tied 1-1, Game 3
+  else if (leadW === 1 && trailW === 0)  score = 40;  // Game 2
+  else if (leadW === 0 && trailW === 0)  score = 30;  // Game 1 opener
+  return { score, aW, hW, game, leader };
+}
+
+function spencerPrediction(liveEvents, sm) {
+  if (!liveEvents?.length) return null;
+  // Skip games already finished — predictions are for upcoming/live games only
+  const upcoming = liveEvents.filter(ev => ev.competitions?.[0]?.status?.type?.state !== 'post');
+  if (!upcoming.length) return null;
+  let best = null;
+  for (const ev of upcoming) {
+    const mu = gameMatchup(ev);
+    if (!mu) continue;
+    const st = gameStakes(mu.aA, mu.hA, sm);
+    if (!best || st.score > best.st.score) best = { ev, mu, st };
   }
-  el.innerHTML = `<div class="biggest-swing">
-    <span class="swing-label">Spencer's pick today</span>
-    <span class="swing-text">${text}</span>
-  </div>`;
+  if (!best) return null;
+  const { aA, hA } = best.mu;
+  const { aW, hW, game, leader } = best.st;
+  const trailing = leader ? (leader === aA ? hA : aA) : null;
+  const leadW = Math.max(aW, hW), trailW = Math.min(aW, hW);
+  let pred;
+  if (aW === 0 && hW === 0) {
+    pred = `${aA} at ${hA}, Game 1 tonight. Home court matters more in the playoffs than any other round — watch who sets the tone in the first 6 minutes.`;
+  } else if (leadW === 3) {
+    pred = `${trailing} faces elimination tonight against ${leader}. Down 3-${trailW}, desperation basketball is their only card left — expect a gritty start.`;
+  } else if (leadW === 2 && trailW === 2) {
+    pred = `${aA} vs ${hA} tied 2-2 — effectively a best-of-three now. Whoever takes Game 5 wins the series 82% of the time historically.`;
+  } else if (leadW === 1 && trailW === 1) {
+    pred = `Series knotted 1-1, ${aA} at ${hA}. Game 3 is the momentum pivot — a home win here usually snowballs into a series lead.`;
+  } else if (leadW === 2 && trailW === 1) {
+    pred = `${leader} up 2-1 heading into Game 4. A 3-1 lead is nearly unbeatable — ${trailing} has to hold serve or start printing golf tee times.`;
+  } else if (leadW === 2 && trailW === 0) {
+    pred = `${leader} up 2-0 on ${trailing}. Teams down 2-0 win the series just 6% of the time — tonight is a must-win for ${trailing}.`;
+  } else if (leadW === 1 && trailW === 0 && game === 2) {
+    pred = `${leader} stole Game 1 — can they double up, or does ${trailing} answer back at home to even the series?`;
+  } else {
+    pred = `${aA} at ${hA}, Game ${game}. ${leader ? leader + ' leads ' + leadW + '-' + trailW : 'Series tied'} — every possession matters from here.`;
+  }
+  return pred;
+}
+
+function kabeerFactPick(liveEvents, sm, upcoming) {
+  // Collect candidate teams: today's games first, then upcoming games, then any live series team.
+  const candidates = [];
+  const seen = new Set();
+  const push = abbr => { if (abbr && TEAM_FUN_FACTS[abbr] && !seen.has(abbr)) { seen.add(abbr); candidates.push(abbr); } };
+  for (const ev of (liveEvents || [])) {
+    const mu = gameMatchup(ev);
+    if (mu) { push(mu.aA); push(mu.hA); }
+  }
+  for (const ev of (upcoming?.events || [])) {
+    const mu = gameMatchup(ev);
+    if (mu) { push(mu.aA); push(mu.hA); }
+  }
+  for (const s of sm.values()) {
+    if (!s.completed) { push(s.awayAbbr); push(s.homeAbbr); }
+  }
+  if (!candidates.length) return null;
+  // Prefer drafted teams
+  const drafted = candidates.filter(a => !!getOwner(a));
+  const pool = drafted.length ? drafted : candidates;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const team = pool[hashStr(today + 'team') % pool.length];
+  const facts = TEAM_FUN_FACTS[team];
+  const fact = facts[hashStr(today + team) % facts.length];
+  return { team, fact };
+}
+
+function renderDesk(liveEvents, sm, upcoming) {
+  const el = document.getElementById('desk-container');
+  const prediction = spencerPrediction(liveEvents, sm);
+  const kabeer = kabeerFactPick(liveEvents, sm, upcoming);
+  const cards = [];
+  if (prediction) {
+    cards.push(`<div class="desk-card">
+      <div class="desk-avatar spencer">S</div>
+      <div class="desk-body">
+        <div class="desk-head">
+          <span class="desk-name">Spencer</span>
+          <span class="desk-topic">Today's Prediction</span>
+        </div>
+        <div class="desk-quote">${prediction}</div>
+      </div>
+    </div>`);
+  }
+  if (kabeer) {
+    cards.push(`<div class="desk-card">
+      <div class="desk-avatar kabeer">K</div>
+      <div class="desk-body">
+        <div class="desk-head">
+          <span class="desk-name">Kabeer</span>
+          <span class="desk-topic">Fun Fact · ${kabeer.team}</span>
+        </div>
+        <div class="desk-quote">${kabeer.fact}</div>
+      </div>
+    </div>`);
+  }
+  el.innerHTML = cards.length ? `<div class="desk-grid">${cards.join('')}</div>` : '';
 }
 
 // ── Historical race chart ─────────────────────────────────────────────
@@ -1971,6 +2148,8 @@ async function renderLiveGames(events, sm) {
         [...prevLiveGameIds].some(id => !freshLiveIds.has(id));
 
       await renderLiveGames(fresh, updatedSm);
+      // Re-render desk so Spencer's pick targets the next game in the queue
+      renderDesk(fresh, updatedSm, null);
 
       // Re-fetch odds file when a game finishes — GitHub Action runs overnight,
       // but re-reading the file costs nothing and picks up any manual trigger.
@@ -2157,9 +2336,11 @@ async function loadData() {
     renderScoreboard(elim, inP, sm);
     renderSideBet(calcSideBet(freshOdds, elim, inP), false, null);
     renderRoundProgress(sm);
-    renderBiggestSwing(sm, elim, inP);
     renderBracket(sm);
     await renderLiveGames(liveEvents, sm);
+    // If no games today, look at tomorrow's slate so Kabeer can pick a relevant team
+    const upcomingForDesk = liveEvents.length ? null : await findUpcomingGames(3);
+    renderDesk(liveEvents, sm, upcomingForDesk);
     renderMatchups(sm, elim);
     renderTeams(elim, inP);
     const hist = updateHistory(elim, inP);
