@@ -1307,42 +1307,69 @@ function renderBiggestSwing(sm, elim, inPlayoffs) {
   for (const [k, s] of sm.entries()) {
     const prev = snapMap.get(k);
     if (!prev) continue;
-    const prevTotal = prev.awayWins + prev.homeWins;
-    const nowTotal = s.awayWins + s.homeWins;
-    const gamesPlayed = nowTotal - prevTotal;
+    const gamesPlayed = (s.awayWins + s.homeWins) - (prev.awayWins + prev.homeWins);
     if (gamesPlayed <= 0) continue;
-    // Score: completion > games played
     const score = (s.completed && !prev.completed ? 100 : 0) + gamesPlayed * 10;
-    if (!best || score > best.score) best = { score, s, prev, gamesPlayed, newlyClinched: s.completed && !prev.completed };
+    if (!best || score > best.score) best = { score, s, prev };
   }
   if (!best) { el.innerHTML = ''; return; }
-  const { s, newlyClinched } = best;
-  const aoOwner = getOwner(s.awayAbbr), hoOwner = getOwner(s.homeAbbr);
+  const { s, prev } = best;
+  const aA = s.awayAbbr, hA = s.homeAbbr;
+  const aW = s.awayWins, hW = s.homeWins;
+  const pAW = prev.awayWins, pHW = prev.homeWins;
+  const aGain = aW - pAW, hGain = hW - pHW;
+
   let text;
-  if (newlyClinched) {
-    const winAbbr = s.awayWins >= 4 ? s.awayAbbr : s.homeAbbr;
-    const loseAbbr = s.awayWins >= 4 ? s.homeAbbr : s.awayAbbr;
-    const winOwner = getOwner(winAbbr);
-    text = `${winAbbr} (${winOwner?.[0] || '-'}) eliminated ${loseAbbr} — series clinched`;
+  if (s.completed && !prev.completed) {
+    // Series just wrapped up
+    const [winner, loser, wW, lW] = aW >= 4 ? [aA, hA, aW, hW] : [hA, aA, hW, aW];
+    text = `${winner} closes out ${loser} to advance, ${wW}–${lW}`;
   } else {
-    const leadA = s.awayWins > s.homeWins ? s.awayAbbr : s.homeWins > s.awayWins ? s.homeAbbr : null;
-    const leadO = leadA ? getOwner(leadA) : null;
-    text = leadA
-      ? `${s.awayAbbr} vs ${s.homeAbbr}: ${leadA} (${leadO?.[0]}) now leads ${Math.max(s.awayWins,s.homeWins)}–${Math.min(s.awayWins,s.homeWins)}`
-      : `${s.awayAbbr} vs ${s.homeAbbr}: tied ${s.awayWins}–${s.homeWins}`;
+    const teamWon = aGain > hGain ? aA : hGain > aGain ? hA : null;
+    if (!teamWon) {
+      // Both won same number — show current standings
+      text = aW > hW ? `${aA} leads ${aW}–${hW}` : hW > aW ? `${hA} leads ${hW}–${aW}` : `${aA} and ${hA} are tied ${aW}–${hW}`;
+    } else {
+      const teamLost = teamWon === aA ? hA : aA;
+      const wW = teamWon === aA ? aW : hW;
+      const lW = teamWon === aA ? hW : aW;
+      const prevWW = teamWon === aA ? pAW : pHW;
+      const prevLW = teamWon === aA ? pHW : pAW;
+      if (wW === lW) {
+        text = `${teamWon} beats ${teamLost} to tie the series ${wW}–${lW}`;
+      } else if (wW > lW && prevWW <= prevLW) {
+        text = prevWW === prevLW
+          ? `${teamWon} beats ${teamLost} to take the series lead ${wW}–${lW}`
+          : `${teamWon} flips the series — now leads ${teamLost} ${wW}–${lW}`;
+      } else if (wW > lW) {
+        text = `${teamWon} extends the lead over ${teamLost}, now up ${wW}–${lW}`;
+      } else {
+        text = `${teamWon} beats ${teamLost} to cut the deficit to ${lW}–${wW}`;
+      }
+    }
   }
   el.innerHTML = `<div class="biggest-swing">
-    <span class="swing-label">Biggest swing today</span>
+    <span class="swing-label">Spencer's pick today</span>
     <span class="swing-text">${text}</span>
-    <span class="swing-byline">— via Spencer</span>
   </div>`;
 }
 
 // ── Historical race chart ─────────────────────────────────────────────
 const HISTORY_KEY = 'nba26-history';
+// Hardcoded baseline — both drafters started with 10 picks, then play-in
+// (Apr 15-16) eliminated CHA + GSW (Kevin) and LAC + MIA (Derek), leaving 8 each.
+const HISTORY_SEED = [
+  { day: '2026-04-15', k: 10, d: 10 },
+  { day: '2026-04-16', k: 8,  d: 8  },
+];
 function updateHistory(elim, inPlayoffs) {
   let hist = [];
   try { hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch {}
+  // Merge seed entries that aren't already recorded
+  const storedDays = new Set(hist.map(h => h.day));
+  for (const s of HISTORY_SEED) {
+    if (!storedDays.has(s.day)) hist.push(s);
+  }
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const kAlive = DRAFT.Kevin.filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
   const dAlive = DRAFT.Derek.filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
@@ -1350,7 +1377,6 @@ function updateHistory(elim, inPlayoffs) {
   hist = hist.filter(h => h.day !== today);
   hist.push({ day: today, k: kAlive, d: dAlive });
   hist.sort((a, b) => a.day.localeCompare(b.day));
-  // Keep last 60 days max
   if (hist.length > 60) hist = hist.slice(-60);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
   return hist;
