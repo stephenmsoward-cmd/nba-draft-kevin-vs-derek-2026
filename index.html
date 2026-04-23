@@ -764,6 +764,10 @@
       border-radius: 16px;
       padding: 20px 24px;
       margin-bottom: 36px;
+      min-height: 360px;   /* reserve space to prevent CLS when odds load */
+    }
+    @media (max-width: 560px) {
+      .side-bet-card { min-height: 460px; }  /* team rows stack taller on mobile */
     }
 
     .sb-players {
