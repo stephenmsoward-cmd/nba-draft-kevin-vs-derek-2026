@@ -90,7 +90,7 @@ jobs:
                                   print(f'  [ESPN row] {team_cell}: {odds_str} → {p:.4f}')
 
                   # Strategy 2: look for any element with odds pattern next to team names
-                  if len(probs) < 4:
+                  if len(probs) < 2:
                       print('[ESPN] Table strategy found < 4 teams, trying text scan...')
                       probs = {}
                       text = soup.get_text(separator='\n')
@@ -111,7 +111,7 @@ jobs:
                                           print(f'  [ESPN scan] {candidate}: {line} → {p:.4f}')
                                       break
 
-                  if len(probs) >= 4:
+                  if len(probs) >= 2:
                       source = 'espn-futures-page'
                       print(f'[ESPN] ✓ Got {len(probs)} teams')
                   else:
@@ -122,7 +122,7 @@ jobs:
               print(f'[ESPN] Error: {e}')
 
           # ── Attempt 2: DraftKings via requests session ────────────────
-          if len(probs) < 4:
+          if len(probs) < 2:
               print('[DK] Trying DraftKings with session cookies...')
               try:
                   session = requests.Session()
@@ -153,7 +153,7 @@ jobs:
                                                   if p > 0:
                                                       dk_probs[label] = dk_probs.get(label, 0) + p
                                                       print(f'    {label}: {price}')
-                  if len(dk_probs) >= 4:
+                  if len(dk_probs) >= 2:
                       probs = dk_probs
                       source = 'draftkings-api'
               except Exception as e:
@@ -163,7 +163,7 @@ jobs:
           # If both ESPN and DraftKings fail, we intentionally skip writing.
           # The existing data/odds.json remains in place so the frontend keeps
           # showing the last known good odds until the next successful scrape.
-          if len(probs) < 4:
+          if len(probs) < 2:
               print(f'\n[Skip] Only {len(probs)} teams — leaving existing odds.json untouched.')
               raise SystemExit(0)
 
