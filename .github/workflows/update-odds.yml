@@ -159,44 +159,14 @@ jobs:
               except Exception as e:
                   print(f'[DK] Error: {e}')
 
-          # ── Attempt 3: The Odds API fallback ─────────────────────────
-          if len(probs) < 4:
-              import os
-              key = os.environ.get('ODDS_API_KEY', '')
-              if key:
-                  print('[OddsAPI] Falling back to The Odds API...')
-                  try:
-                      sports = requests.get(f'https://api.the-odds-api.com/v4/sports?apiKey={key}', timeout=10).json()
-                      bball = [s['key'] for s in sports if 'basketball' in (s.get('group') or '').lower() and s.get('has_outrights')]
-                      sport_key = bball[0] if bball else 'basketball_nba_championship_winner'
-                      print(f'  Sport key: {sport_key}')
-                      for path in [f'sports/{sport_key}/outrights', f'sports/{sport_key}/odds?markets=outrights']:
-                          sep = '&' if '?' in path else '?'
-                          url = f'https://api.the-odds-api.com/v4/{path}{sep}apiKey={key}&regions=us,uk,eu,au&oddsFormat=american'
-                          resp = requests.get(url, timeout=10)
-                          print(f'  {path}: {resp.status_code}')
-                          if resp.status_code != 200:
-                              continue
-                          events = resp.json()
-                          totals, counts = {}, {}
-                          for ev in events:
-                              for book in ev.get('bookmakers', []):
-                                  for market in book.get('markets', []):
-                                      for outcome in market.get('outcomes', []):
-                                          nm = outcome.get('name', '')
-                                          price = float(outcome.get('price', 0))
-                                          if not price: continue
-                                          p = 100/(price+100) if price > 0 else abs(price)/(abs(price)+100)
-                                          totals[nm] = totals.get(nm, 0) + p
-                                          counts[nm] = counts.get(nm, 0) + 1
-                          probs = {n: totals[n]/counts[n] for n in totals}
-                          if len(probs) >= 4:
-                              source = 'the-odds-api'
-                              break
-                  except Exception as e:
-                      print(f'[OddsAPI] Error: {e}')
-
           # ── Write result ──────────────────────────────────────────────
+          # If both ESPN and DraftKings fail, we intentionally skip writing.
+          # The existing data/odds.json remains in place so the frontend keeps
+          # showing the last known good odds until the next successful scrape.
+          if len(probs) < 4:
+              print(f'\n[Skip] Only {len(probs)} teams — leaving existing odds.json untouched.')
+              raise SystemExit(0)
+
           print(f'\n[Result] Source: {source}, Teams: {len(probs)}')
           for nm, p in sorted(probs.items(), key=lambda x: -x[1]):
               print(f'  {nm}: {p:.4f}')
@@ -211,8 +181,6 @@ jobs:
               json.dump(output, f, indent=2)
           print(f'\nWrote {len(probs)} teams to data/odds.json')
           PYEOF
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
 
       - name: Commit updated odds
         run: |
