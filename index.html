@@ -1594,8 +1594,30 @@ const SPENCER_TEMPLATES = {
   ],
 };
 
+// Populated by fetchSpencerHistory() before loadData renders the desk cards.
+let cachedSpencerHistory = null;
+
+async function fetchSpencerHistory() {
+  try {
+    const r = await fetch(`data/spencer-history.json?t=${Date.now()}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    cachedSpencerHistory = j;
+    return j;
+  } catch {
+    return null;
+  }
+}
+
 function spencerPrediction(liveEvents, sm) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  // Prefer the server-side history (canonical across all viewers).
+  const serverEntries = cachedSpencerHistory?.entries || [];
+  const serverToday = serverEntries.find(e => e.date === today);
+  if (serverToday?.text) return serverToday.text;
+
+  // Fallback: client-side generation for local preview or if the workflow
+  // hasn't run yet today.
   const storageKey = 'nba26-spencer';
   let history = [];
   try { history = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
@@ -1698,6 +1720,13 @@ function seedSpencerHistory() {
 }
 
 function spencerRecord() {
+  // Prefer server-side canonical history; fall back to localStorage + seed.
+  const serverEntries = cachedSpencerHistory?.entries;
+  if (serverEntries && serverEntries.length) {
+    const wins   = serverEntries.filter(h => h.result === 'win').length;
+    const losses = serverEntries.filter(h => h.result === 'loss').length;
+    return { wins, losses, total: wins + losses };
+  }
   seedSpencerHistory();
   let history = [];
   try { history = JSON.parse(localStorage.getItem('nba26-spencer') || '[]'); } catch {}
@@ -2510,9 +2539,10 @@ async function loadData() {
   document.getElementById('error-container').innerHTML = '';
 
   try {
-    // data/odds.json is a local file updated nightly by GitHub Actions — fast to fetch.
+    // data/odds.json and data/spencer-history.json are local files updated
+    // by GitHub Actions — fast to fetch.
     const [events, liveEvents, freshOdds] = await Promise.all([
-      fetchAll(), fetchLiveGames(), fetchChampionshipOdds(),
+      fetchAll(), fetchLiveGames(), fetchChampionshipOdds(), fetchSpencerHistory(),
     ]);
     cachedHistoricalEvents = events;
     // Settle any pending Spencer predictions against now-final games

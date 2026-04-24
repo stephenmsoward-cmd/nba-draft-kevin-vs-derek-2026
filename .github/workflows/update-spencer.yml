@@ -1,0 +1,281 @@
+name: Update Spencer Predictions
+
+on:
+  schedule:
+    # 14:00 UTC daily = 10:00 AM ET during EDT. Runs after overnight West-Coast
+    # games finalize but well before any evening tipoffs, so yesterday's entry
+    # can be graded and today's entry can be generated in one pass.
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-spencer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Grade yesterday + generate today
+        run: |
+          python3 << 'PYEOF'
+          import json, os, requests
+          from datetime import datetime, timezone, timedelta
+
+          HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; nba-draft-bot/1.0)'}
+          PLAYOFF_START = datetime(2026, 4, 18).date()
+          PATH = 'data/spencer-history.json'
+
+          # ── Team normalization (mirrors frontend) ────────────────────
+          ABBR_FIX = {'PHO': 'PHX', 'GS': 'GSW', 'SA': 'SAS', 'NY': 'NYK', 'NO': 'NOP'}
+          def norm(a):
+              if not a: return ''
+              u = str(a).upper()
+              return ABBR_FIX.get(u, u)
+
+          def today_et():
+              # EDT is UTC-4; NBA playoffs run entirely within EDT.
+              return (datetime.now(timezone.utc) - timedelta(hours=4)).date()
+
+          def fetch_events(date_str):
+              url = f'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={date_str}&seasontype=3'
+              try:
+                  r = requests.get(url, headers=HEADERS, timeout=15)
+                  r.raise_for_status()
+                  return r.json().get('events', [])
+              except Exception as e:
+                  print(f'[fetch] {date_str}: {e}')
+                  return []
+
+          def matchup(ev):
+              comp = (ev.get('competitions') or [{}])[0]
+              cs = comp.get('competitors') or []
+              if len(cs) < 2: return None
+              away = next((c for c in cs if c.get('homeAway') == 'away'), cs[0])
+              home = next((c for c in cs if c.get('homeAway') == 'home'), cs[1])
+              aA = norm((away.get('team') or {}).get('abbreviation'))
+              hA = norm((home.get('team') or {}).get('abbreviation'))
+              return {'aA': aA, 'hA': hA, 'comp': comp, 'cs': cs}
+
+          # ── Build series state from all completed playoff games ──────
+          def build_series(all_events):
+              series = {}
+              for ev in all_events:
+                  mu = matchup(ev)
+                  if not mu: continue
+                  key = '_'.join(sorted([mu['aA'], mu['hA']]))
+                  if key not in series:
+                      series[key] = {'awayAbbr': mu['aA'], 'homeAbbr': mu['hA'], 'awayWins': 0, 'homeWins': 0}
+                  status = (mu['comp'].get('status', {}).get('type', {}) or {}).get('state')
+                  if status != 'post': continue
+                  winner = next((c for c in mu['cs'] if c.get('winner')), None)
+                  if not winner: continue
+                  w = norm((winner.get('team') or {}).get('abbreviation'))
+                  s = series[key]
+                  if w == s['awayAbbr']: s['awayWins'] += 1
+                  elif w == s['homeAbbr']: s['homeWins'] += 1
+              return series
+
+          def game_stakes(aA, hA, series):
+              key = '_'.join(sorted([aA, hA]))
+              s = series.get(key)
+              aW = (s['awayWins'] if s['awayAbbr'] == aA else s['homeWins']) if s else 0
+              hW = (s['awayWins'] if s['awayAbbr'] == hA else s['homeWins']) if s else 0
+              game = aW + hW + 1
+              leader = aA if aW > hW else (hA if hW > aW else None)
+              leadW, trailW = max(aW, hW), min(aW, hW)
+              score = 0
+              if leadW == 3: score = 120
+              elif leadW == 2 and trailW == 2: score = 100
+              elif leadW == 2 and game == 5: score = 60
+              elif leadW == 2 and trailW == 1: score = 55
+              elif leadW == 2 and trailW == 0: score = 50
+              elif leadW == 1 and trailW == 1: score = 70
+              elif leadW == 1 and trailW == 0: score = 40
+              elif leadW == 0 and trailW == 0: score = 30
+              return {'score': score, 'aW': aW, 'hW': hW, 'game': game, 'leader': leader}
+
+          # djb2 hash matching frontend hashStr
+          def djb2(s):
+              h = 5381
+              for c in s:
+                  h = ((h << 5) + h + ord(c)) & 0xFFFFFFFF
+              # Match JS |0 sign-wrap then Math.abs
+              if h & 0x80000000:
+                  h = -((~h & 0xFFFFFFFF) + 1)
+              return abs(h)
+
+          # ── Spencer's templates (mirrors frontend SPENCER_TEMPLATES) ─
+          def templates(c):
+              return {
+                  'game1': [
+                      f"{c['aA']} at {c['hA']}, Game 1. Home court sets the tone in the playoffs — {c['hA']} wins tonight and grabs early series control.",
+                      f"Series opener, {c['aA']} at {c['hA']}. First-game jitters favor the host — {c['hA']} wins a gritty, low-scoring slog.",
+                      f"{c['aA']} at {c['hA']}, Game 1. Tape-heavy openers reward the prepared team — {c['hA']} executes the script and takes it by 8+.",
+                  ],
+                  'elim': [
+                      f"{c['trailing']} faces elimination against {c['leader']}. Desperation buys one game, not four — {c['leader']} closes it out tonight.",
+                      f"{c['leader']} has the closeout look. {c['trailing']}'s season ends tonight, probably in the fourth quarter.",
+                      f"{c['leader']} up 3-{c['trailW']} and closing teams don't blink. Book it — {c['leader']} finishes the job.",
+                  ],
+                  'pivot22': [
+                      f"{c['aA']} vs {c['hA']} tied 2-2 — effectively a best-of-three now. Game 5 winners take the series 82% of the time, and {c['hA']} grabs it tonight.",
+                      f"Series knotted at 2-2, back in {c['hA']}. Game 5 on home floor is where this series flips — {c['hA']} takes a 3-2 lead.",
+                      f"2-2 swing game at {c['hA']}. Home crowd plus a full rest day — {c['hA']} wins it and heads to Game 6 up.",
+                  ],
+                  'tied11': [
+                      f"Series knotted 1-1, {c['aA']} at {c['hA']}. Game 3 is the momentum pivot — {c['hA']} protects home court and flips the series lead.",
+                      f"Game 3 at {c['hA']}, tied 1-1. Crowd energy swings this one — {c['hA']} takes control early and never looks back.",
+                      f"{c['hA']} gets its first home game of the series. Expect a loud start, a double-digit lead, and a {c['hA']} W.",
+                  ],
+                  'lead21': [
+                      f"{c['leader']} up 2-1 heading into Game 4. {c['trailing']} has to hold serve or it's effectively over — {c['trailing']} survives tonight to force 2-2.",
+                      f"{c['leader']} leads 2-1 but travels to {c['trailing']}. Down 3-1 is 95% death, so {c['trailing']} plays like it and grinds out a home win.",
+                      f"Game 4 at {c['trailing']}. Their season is on the table — expect a desperate start and a {c['trailing']} W to level it.",
+                  ],
+                  'lead20': [
+                      f"{c['leader']} up 2-0 on {c['trailing']}. Teams down 2-0 win the series just 6% of the time — {c['trailing']} steals one at home to avoid the sweep scare.",
+                      f"{c['trailing']} finally gets a home crowd. Expect a bounce-back W and a 2-1 series heading into Game 4.",
+                      f"Down 2-0, headed home, fighting for life. {c['trailing']} wins a close one to reset the series.",
+                  ],
+                  'stole1': [
+                      f"{c['leader']} stole Game 1. Expect {c['trailing']} to answer back at home and even the series 1-1 before the road trip.",
+                      f"{c['leader']} took Game 1 on the road. {c['trailing']} corrects the rotation, cleans up turnovers, and wins Game 2 comfortably.",
+                      f"Home teams rarely go down 0-2. {c['trailing']} responds tonight and ties the series up.",
+                  ],
+                  'fallback': [
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['leaderLabel']} — {c['pick']} takes this one by double digits.",
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['pick']} controls the tempo and wins going away.",
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. Expect a tight third quarter and a {c['pick']} pull-away down the stretch.",
+                  ],
+              }
+
+          def pick_template_id(aW, hW, leadW, trailW, game):
+              if aW == 0 and hW == 0: return 'game1'
+              if leadW == 3: return 'elim'
+              if leadW == 2 and trailW == 2: return 'pivot22'
+              if leadW == 1 and trailW == 1: return 'tied11'
+              if leadW == 2 and trailW == 1: return 'lead21'
+              if leadW == 2 and trailW == 0: return 'lead20'
+              if leadW == 1 and trailW == 0 and game == 2: return 'stole1'
+              return 'fallback'
+
+          def generate_for_today(today_events, series, prior):
+              non_post = [ev for ev in today_events
+                          if ((ev.get('competitions') or [{}])[0].get('status', {}).get('type', {}) or {}).get('state') != 'post']
+              if not non_post: return None
+              best = None
+              for ev in non_post:
+                  mu = matchup(ev)
+                  if not mu: continue
+                  st = game_stakes(mu['aA'], mu['hA'], series)
+                  if not best or st['score'] > best['st']['score']:
+                      best = {'aA': mu['aA'], 'hA': mu['hA'], 'st': st}
+              if not best: return None
+              aA, hA, st = best['aA'], best['hA'], best['st']
+              aW, hW, game, leader = st['aW'], st['hW'], st['game'], st['leader']
+              leadW, trailW = max(aW, hW), min(aW, hW)
+              trailing = (hA if leader == aA else aA) if leader else None
+              pick = leader or hA
+              leader_label = f"{leader} leads {leadW}-{trailW}" if leader else 'Series tied'
+              tid = pick_template_id(aW, hW, leadW, trailW, game)
+              ctx = {'aA': aA, 'hA': hA, 'leader': leader, 'trailing': trailing,
+                     'leadW': leadW, 'trailW': trailW, 'game': game, 'pick': pick,
+                     'leaderLabel': leader_label}
+              variants = templates(ctx)[tid]
+              today_str = today_et().isoformat()
+              idx = djb2(today_str + tid) % len(variants)
+              if prior and prior.get('templateId') == tid and len(variants) > 1:
+                  idx = (prior.get('variantIdx', 0) + 1) % len(variants)
+              return {
+                  'date': today_str,
+                  'templateId': tid,
+                  'variantIdx': idx,
+                  'text': variants[idx],
+                  'pick': pick,
+                  'aA': aA,
+                  'hA': hA,
+                  'result': None,
+              }
+
+          def grade_entry(entry):
+              if entry.get('result') or entry.get('seed'): return False
+              if not (entry.get('pick') and entry.get('aA') and entry.get('hA')): return False
+              if entry.get('date', '') >= today_et().isoformat(): return False
+              date_key = entry['date'].replace('-', '')
+              events = fetch_events(date_key)
+              for ev in events:
+                  mu = matchup(ev)
+                  if not mu: continue
+                  if entry['aA'] in (mu['aA'], mu['hA']) and entry['hA'] in (mu['aA'], mu['hA']):
+                      status = (mu['comp'].get('status', {}).get('type', {}) or {}).get('state')
+                      if status != 'post': return False
+                      winner = next((c for c in mu['cs'] if c.get('winner')), None)
+                      if not winner: return False
+                      w = norm((winner.get('team') or {}).get('abbreviation'))
+                      entry['result'] = 'win' if w == entry['pick'] else 'loss'
+                      return True
+              return False
+
+          # ── Main ──────────────────────────────────────────────────────
+          data = {'updatedAt': None, 'entries': []}
+          if os.path.exists(PATH):
+              with open(PATH) as f:
+                  data = json.load(f)
+          entries = data.get('entries', [])
+
+          # Grade any pending past entries
+          graded = 0
+          for e in entries:
+              if grade_entry(e):
+                  print(f"[grade] {e['date']}: {e.get('pick')} → {e['result']}")
+                  graded += 1
+          print(f'[grade] {graded} entry/entries graded.')
+
+          # Generate today's entry if not already present
+          today_str = today_et().isoformat()
+          if entries and entries[0].get('date') == today_str:
+              print(f'[gen] Today ({today_str}) already has an entry; skipping generation.')
+          else:
+              # Build series state from all playoff dates up to (but not including) today
+              all_events = []
+              d = PLAYOFF_START
+              today = today_et()
+              while d < today:
+                  all_events.extend(fetch_events(d.strftime('%Y%m%d')))
+                  d += timedelta(days=1)
+              series = build_series(all_events)
+              today_events = fetch_events(today.strftime('%Y%m%d'))
+              prior = entries[0] if entries else None
+              new_entry = generate_for_today(today_events, series, prior)
+              if new_entry:
+                  entries.insert(0, new_entry)
+                  entries = entries[:30]
+                  print(f'[gen] Added {new_entry["date"]}: {new_entry["pick"]} ({new_entry["templateId"]}/v{new_entry["variantIdx"]})')
+              else:
+                  print('[gen] No eligible game today — skipping.')
+
+          out = {
+              'updatedAt': datetime.now(timezone.utc).isoformat(),
+              'entries': entries,
+          }
+          with open(PATH, 'w') as f:
+              json.dump(out, f, indent=2)
+          print(f'[write] {len(entries)} entries total.')
+          PYEOF
+
+      - name: Commit updated history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/spencer-history.json
+          if git diff --staged --quiet; then
+            echo "No Spencer changes to commit"
+          else
+            git commit -m "chore: update Spencer predictions [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git push
+          fi
