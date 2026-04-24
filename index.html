@@ -988,6 +988,13 @@
       text-transform: uppercase;
       color: var(--muted);
     }
+    .desk-record {
+      color: var(--text);
+      background: rgba(34, 197, 94, 0.12);
+      padding: 1px 6px;
+      border-radius: 10px;
+      letter-spacing: 0.04em;
+    }
     .desk-quote {
       font-size: 0.82rem;
       color: var(--text);
@@ -1637,9 +1644,53 @@ function spencerPrediction(liveEvents, sm) {
   }
   const text = variants[idx];
 
-  const updated = [{ date: today, templateId, variantIdx: idx, text }, ...history].slice(0, 14);
+  const updated = [
+    { date: today, templateId, variantIdx: idx, text, pick, aA, hA, result: null },
+    ...history,
+  ].slice(0, 30);
   try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
   return text;
+}
+
+// Scan past predictions and mark win/loss against final game results.
+// Runs after fetchAll() so we can look up any date in the playoffs.
+function reconcileSpencerHistory(allEvents) {
+  const storageKey = 'nba26-spencer';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
+  if (!history.length) return;
+  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  let changed = false;
+  for (const entry of history) {
+    if (entry.result || !entry.pick || !entry.aA || !entry.hA) continue;
+    if (entry.date >= todayET) continue;  // today's game might still be live
+    const dateKey = entry.date.replace(/-/g, '');
+    const game = allEvents.find(ev => {
+      if (ev._date !== dateKey) return false;
+      const cs = ev.competitions?.[0]?.competitors || [];
+      const abbrs = cs.map(c => norm(c.team?.abbreviation));
+      return abbrs.includes(entry.aA) && abbrs.includes(entry.hA);
+    });
+    if (!game) continue;
+    const comp = game.competitions[0];
+    if (comp.status?.type?.state !== 'post') continue;
+    const winner = comp.competitors.find(c => c.winner);
+    if (!winner) continue;
+    const winAbbr = norm(winner.team?.abbreviation);
+    entry.result = winAbbr === entry.pick ? 'win' : 'loss';
+    changed = true;
+  }
+  if (changed) {
+    try { localStorage.setItem(storageKey, JSON.stringify(history)); } catch {}
+  }
+}
+
+function spencerRecord() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('nba26-spencer') || '[]'); } catch {}
+  const wins   = history.filter(h => h.result === 'win').length;
+  const losses = history.filter(h => h.result === 'loss').length;
+  return { wins, losses, total: wins + losses };
 }
 
 function kabeerFactPick(liveEvents, sm, upcoming) {
@@ -1675,12 +1726,16 @@ function renderDesk(liveEvents, sm, upcoming) {
   const kabeer = kabeerFactPick(liveEvents, sm, upcoming);
   const cards = [];
   if (prediction) {
+    const rec = spencerRecord();
+    const recLabel = rec.total > 0
+      ? ` · <span class="desk-record" title="Spencer's prediction record on settled games">${rec.wins}-${rec.losses}</span>`
+      : '';
     cards.push(`<div class="desk-card">
       <div class="desk-avatar spencer">S</div>
       <div class="desk-body">
         <div class="desk-head">
           <span class="desk-name">Spencer</span>
-          <span class="desk-topic">Today's Prediction</span>
+          <span class="desk-topic">Today's Prediction${recLabel}</span>
         </div>
         <div class="desk-quote">${prediction}</div>
       </div>
@@ -2449,6 +2504,8 @@ async function loadData() {
       fetchAll(), fetchLiveGames(), fetchChampionshipOdds(),
     ]);
     cachedHistoricalEvents = events;
+    // Settle any pending Spencer predictions against now-final games
+    reconcileSpencerHistory([...events, ...liveEvents]);
     // Merge live events so series wins reflect completed games today
     const sm       = processEvents([...events, ...liveEvents]);
     const elim     = eliminated(sm);
