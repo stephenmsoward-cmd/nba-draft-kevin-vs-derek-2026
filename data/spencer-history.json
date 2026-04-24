@@ -1,6 +1,20 @@
 {
-  "updatedAt": "2026-04-24T00:00:00+00:00",
+  "updatedAt": "2026-04-24T16:55:36.734013+00:00",
   "entries": [
-    { "date": "2026-04-22", "seed": true, "result": "win" }
+    {
+      "date": "2026-04-24",
+      "templateId": "tied11",
+      "variantIdx": 2,
+      "text": "PHI gets its first home game of the series. Expect a loud start, a double-digit lead, and a PHI W.",
+      "pick": "PHI",
+      "aA": "BOS",
+      "hA": "PHI",
+      "result": null
+    },
+    {
+      "date": "2026-04-22",
+      "seed": true,
+      "result": "win"
+    }
   ]
 }
