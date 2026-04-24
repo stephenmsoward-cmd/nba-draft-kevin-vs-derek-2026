@@ -2604,19 +2604,19 @@ async function loadData() {
 
 // ── Hall of Fame ──────────────────────────────────────────────────────
 const HOF_HISTORY = [
-  { year: 2025, winner: 'Kevin', team: 'OKC', dinner: null, paid: false },
-  { year: 2024, winner: 'Kevin', team: 'BOS', dinner: null, paid: false },
-  { year: 2023, winner: 'Kevin', team: 'DEN', dinner: null, paid: false },
-  { year: 2022, winner: 'Kevin', team: 'GSW', dinner: null, paid: false },
-  { year: 2021, winner: 'Kevin', team: 'MIL', dinner: null, paid: false },
-  { year: 2020, winner: 'Kevin', team: 'LAL', dinner: 'Kado No Mise (Minneapolis)', paid: true },
-  { year: 2019, winner: 'Kevin', team: 'TOR', dinner: 'Joo Ok (K-Town)',   paid: true },
-  { year: 2018, winner: 'Kevin', team: 'GSW', dinner: 'New York',          paid: true },
-  { year: 2017, winner: 'Derek', team: 'GSW', dinner: 'New York',          paid: true },
-  { year: 2016, winner: 'Kevin', team: 'CLE', dinner: 'London',            paid: true },
-  { year: 2015, winner: 'Kevin', team: 'GSW', dinner: 'Alamogordo IHOP',  paid: true },
-  { year: 2014, winner: 'Derek', team: 'SAS', dinner: 'Venice',            paid: true },
-  { year: 2013, winner: 'Kevin', team: 'MIA', dinner: "Ruth's Chris (Seattle)", paid: true },
+  { year: 2025, winner: 'Kevin', team: 'OKC', dinner: null, paid: false, value: 323.77 },
+  { year: 2024, winner: 'Kevin', team: 'BOS', dinner: null, paid: false, value: 313.24 },
+  { year: 2023, winner: 'Kevin', team: 'DEN', dinner: null, paid: false, value: 284.77 },
+  { year: 2022, winner: 'Kevin', team: 'GSW', dinner: null, paid: false, value: 258.88 },
+  { year: 2021, winner: 'Kevin', team: 'MIL', dinner: null, paid: false, value: 251.35 },
+  { year: 2020, winner: 'Kevin', team: 'LAL', dinner: 'Kado No Mise (Minneapolis)', paid: true, value: 251.35 },
+  { year: 2019, winner: 'Kevin', team: 'TOR', dinner: 'Joo Ok (K-Town)',    paid: true, value: 234.60 },
+  { year: 2018, winner: 'Kevin', team: 'GSW', dinner: 'Vestry (NY)',        paid: true, value: 228.21 },
+  { year: 2017, winner: 'Derek', team: 'GSW', dinner: 'Kochi (NY)',         paid: true, value: 216.81 },
+  { year: 2016, winner: 'Kevin', team: 'CLE', dinner: 'Ikoyi (London)',     paid: true, value: 161.21 },
+  { year: 2015, winner: 'Kevin', team: 'GSW', dinner: 'IHOP (Alamogordo)',  paid: true, value: 145.23 },
+  { year: 2014, winner: 'Derek', team: 'SAS', dinner: 'Venice',             paid: true, value: 135.13 },
+  { year: 2013, winner: 'Kevin', team: 'MIA', dinner: "Ruth's Chris (Seattle)", paid: true, value: 100.00 },
 ];
 
 function renderHallOfFame() {
@@ -2628,12 +2628,15 @@ function renderHallOfFame() {
   const unpaidList = HOF_HISTORY.filter(h => !h.paid);
   const unpaidCount = unpaidList.length;
   const lastPaid = HOF_HISTORY.find(h => h.paid);
-  const dinnerCounts = {};
-  HOF_HISTORY.forEach(h => { if (h.dinner) dinnerCounts[h.dinner] = (dinnerCounts[h.dinner] || 0) + 1; });
-  let topDinner = null, topCount = 0;
-  for (const [d, c] of Object.entries(dinnerCounts)) { if (c > topCount) { topDinner = d; topCount = c; } }
   const repeatTeams = {};
   HOF_HISTORY.forEach(h => { repeatTeams[h.team] = (repeatTeams[h.team] || 0) + 1; });
+
+  const sumWhere = (pred) => HOF_HISTORY.filter(pred).reduce((s, h) => s + h.value, 0);
+  const kevinCollected = sumWhere(h => h.winner === 'Kevin' && h.paid);
+  const derekCollected = sumWhere(h => h.winner === 'Derek' && h.paid);
+  const outstanding    = sumWhere(h => !h.paid);
+  const totalPaid      = sumWhere(h => h.paid);
+  const fmt = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const expanded = localStorage.getItem('nba26-hof-open') === '1';
 
@@ -2664,24 +2667,23 @@ function renderHallOfFame() {
         <td class="${winCls}">${h.winner}${crown}</td>
         <td class="team">${h.team}${repeatMark}</td>
         <td>${dinnerCell}</td>
+        <td style="white-space:nowrap">${fmt(h.value)}</td>
       </tr>`;
     }).join('');
 
-    const lastPaidStr = lastPaid
-      ? `${lastPaid.dinner}${lastPaid.paidNote ? ` (${lastPaid.paidNote})` : ` (${lastPaid.year})`}`
-      : '—';
+    const tooltip = "The dollar amount the winner gets to spend on themselves at the restaurant. The bill increases or decreases year-over-year based on the % change in the NBA salary cap.";
 
     bodyHTML = `
       <div class="hof-body">
         <table class="hof-table">
-          <thead><tr><th>Year</th><th>Winner</th><th>Team</th><th>Dinner</th></tr></thead>
+          <thead><tr><th>Year</th><th>Winner</th><th>Team</th><th>Dinner</th><th title="${tooltip}" style="cursor:help;text-decoration:underline dotted;text-underline-offset:3px;white-space:nowrap">Winner's Bill</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="hof-stats">
-          <div>Settled: <strong>${HOF_HISTORY.length - unpaidCount}</strong></div>
-          <div>Outstanding: <strong>${unpaidCount}</strong></div>
-          ${topDinner ? `<div>Most frequent: <strong>${topDinner}</strong>${topCount > 1 ? ` (${topCount}×)` : ''}</div>` : ''}
-          <div>Last paid: <strong>${lastPaidStr}</strong></div>
+          <div>Kevin collected: <strong>${fmt(kevinCollected)}</strong></div>
+          <div>Derek collected: <strong>${fmt(derekCollected)}</strong></div>
+          <div>Outstanding (Derek owes Kevin): <strong>${fmt(outstanding)}</strong></div>
+          <div>Total paid: <strong>${fmt(totalPaid)}</strong></div>
         </div>
       </div>
     `;
