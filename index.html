@@ -1685,7 +1685,20 @@ function reconcileSpencerHistory(allEvents) {
   }
 }
 
+// Seed yesterday's correct prediction (Apr 22) so the record starts at 1-0
+// instead of empty — the previous version of spencerPrediction didn't store
+// pick/aA/hA so it can't be graded retroactively via ESPN data.
+function seedSpencerHistory() {
+  const storageKey = 'nba26-spencer';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
+  if (history.some(h => h.seed)) return;
+  history.push({ date: '2026-04-22', seed: true, result: 'win' });
+  try { localStorage.setItem(storageKey, JSON.stringify(history)); } catch {}
+}
+
 function spencerRecord() {
+  seedSpencerHistory();
   let history = [];
   try { history = JSON.parse(localStorage.getItem('nba26-spencer') || '[]'); } catch {}
   const wins   = history.filter(h => h.result === 'win').length;
@@ -1727,9 +1740,7 @@ function renderDesk(liveEvents, sm, upcoming) {
   const cards = [];
   if (prediction) {
     const rec = spencerRecord();
-    const recLabel = rec.total > 0
-      ? ` · <span class="desk-record" title="Spencer's prediction record on settled games">${rec.wins}-${rec.losses}</span>`
-      : '';
+    const recLabel = ` · <span class="desk-record" title="Spencer's prediction record on settled games">${rec.wins}-${rec.losses}</span>`;
     cards.push(`<div class="desk-card">
       <div class="desk-avatar spencer">S</div>
       <div class="desk-body">
