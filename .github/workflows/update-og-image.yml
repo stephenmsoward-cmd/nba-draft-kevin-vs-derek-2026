@@ -1,0 +1,189 @@
+name: Update OG Image
+
+on:
+  schedule:
+    # Same cadence as odds — bracket changes only when a series ends.
+    - cron: '0 1 * * *'    # 9:00 PM ET
+    - cron: '0 4 * * *'    # Midnight ET
+    - cron: '0 6 * * *'    # 2:00 AM ET safety run
+  workflow_dispatch:
+
+jobs:
+  update-og:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-dejavu-core
+          pip install requests pillow
+
+      - name: Generate OG image
+        run: |
+          python3 << 'PYEOF'
+          import requests, os
+          from datetime import datetime, timedelta, timezone
+          from PIL import Image, ImageDraw, ImageFont
+
+          DRAFT = {
+              'Kevin': ['SAS','DEN','NYK','CLE','ATL','LAL','CHA','PHI','POR','GSW'],
+              'Derek': ['OKC','DET','BOS','HOU','MIN','TOR','ORL','PHX','LAC','MIA'],
+          }
+          ABBR_FIX = {'PHO':'PHX','GS':'GSW','SA':'SAS','NY':'NYK','NO':'NOP'}
+          def norm(a):
+              if not a: return ''
+              u = a.upper()
+              return ABBR_FIX.get(u, u)
+
+          # ── Pull ESPN scoreboards from playoff start to today (ET) ─────
+          edt = timezone(timedelta(hours=-4))
+          start = datetime(2026, 4, 18, tzinfo=edt).date()
+          today = datetime.now(edt).date()
+          dates = []
+          d = start
+          while d <= today:
+              dates.append(d.strftime('%Y%m%d'))
+              d += timedelta(days=1)
+
+          events = []
+          for ds in dates:
+              try:
+                  r = requests.get(
+                      f'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={ds}&seasontype=3',
+                      timeout=15,
+                  )
+                  if r.status_code == 200:
+                      for ev in r.json().get('events', []):
+                          ev['_date'] = ds
+                          events.append(ev)
+              except Exception as e:
+                  print(f'[warn] {ds}: {e}')
+
+          # ── Build series map (mirror processEvents in index.html) ──────
+          events.sort(key=lambda e: e.get('_date',''))
+          series = {}
+          for ev in events:
+              comps = ev.get('competitions') or []
+              if not comps: continue
+              comp = comps[0]
+              cs = comp.get('competitors') or []
+              if len(cs) < 2: continue
+              away = next((c for c in cs if c.get('homeAway') == 'away'), cs[0])
+              home = next((c for c in cs if c.get('homeAway') == 'home'), cs[1])
+              away_abbr = norm((away.get('team') or {}).get('abbreviation'))
+              home_abbr = norm((home.get('team') or {}).get('abbreviation'))
+              key = '_'.join(sorted([away_abbr, home_abbr]))
+              away_wins = home_wins = 0
+              ser = comp.get('series') or {}
+              id_to_abbr = {(c.get('team') or {}).get('id'): norm((c.get('team') or {}).get('abbreviation'))
+                            for c in cs if (c.get('team') or {}).get('id')}
+              for sc in (ser.get('competitors') or []):
+                  a = id_to_abbr.get(sc.get('id')) or norm((sc.get('team') or {}).get('abbreviation'))
+                  if a == away_abbr: away_wins = sc.get('wins') or 0
+                  elif a == home_abbr: home_wins = sc.get('wins') or 0
+              completed = max(away_wins, home_wins) >= 4
+              series[key] = {
+                  'awayAbbr': away_abbr, 'homeAbbr': home_abbr,
+                  'awayWins': away_wins, 'homeWins': home_wins,
+                  'completed': completed,
+              }
+
+          eliminated = set()
+          in_playoffs = set()
+          for s in series.values():
+              in_playoffs.add(s['awayAbbr'])
+              in_playoffs.add(s['homeAbbr'])
+              if not s['completed']: continue
+              if s['awayWins'] >= 4: eliminated.add(s['homeAbbr'])
+              elif s['homeWins'] >= 4: eliminated.add(s['awayAbbr'])
+
+          k_alive = len([t for t in DRAFT['Kevin'] if t in in_playoffs and t not in eliminated])
+          d_alive = len([t for t in DRAFT['Derek'] if t in in_playoffs and t not in eliminated])
+          print(f'Kevin alive: {k_alive}, Derek alive: {d_alive}')
+
+          # ── Render 1200×630 PNG ────────────────────────────────────────
+          W, H = 1200, 630
+          BG = (6, 11, 20)
+          SURFACE = (13, 20, 36)
+          BORDER = (26, 40, 64)
+          TEXT = (226, 232, 240)
+          MUTED = (100, 116, 139)
+          KEVIN = (59, 130, 246)
+          DEREK = (239, 68, 68)
+          GREEN = (34, 197, 94)
+
+          img = Image.new('RGB', (W, H), BG)
+          draw = ImageDraw.Draw(img)
+
+          # Subtle bordered card
+          pad = 28
+          draw.rounded_rectangle([pad, pad, W - pad, H - pad],
+                                 radius=24, outline=BORDER, width=2, fill=SURFACE)
+
+          F = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          F_REG = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+          font_eyebrow = ImageFont.truetype(F, 28)
+          font_name    = ImageFont.truetype(F, 64)
+          font_count   = ImageFont.truetype(F, 220)
+          font_label   = ImageFont.truetype(F_REG, 32)
+          font_vs      = ImageFont.truetype(F, 56)
+          font_foot    = ImageFont.truetype(F_REG, 24)
+
+          def text_w(s, fnt):
+              l, t, r, b = draw.textbbox((0, 0), s, font=fnt)
+              return r - l
+
+          # Eyebrow (DejaVu has no emoji glyph, keep it textual)
+          eyebrow = '2026 NBA PLAYOFF DRAFT'
+          ew = text_w(eyebrow, font_eyebrow)
+          draw.text(((W - ew) / 2, 80), eyebrow, font=font_eyebrow, fill=MUTED)
+
+          # Two columns
+          col_y = 170
+          left_cx  = W * 0.28
+          right_cx = W * 0.72
+
+          def draw_col(cx, name, count, color):
+              nw = text_w(name, font_name)
+              draw.text((cx - nw / 2, col_y), name, font=font_name, fill=color)
+              cs = str(count)
+              cw = text_w(cs, font_count)
+              draw.text((cx - cw / 2, col_y + 80), cs, font=font_count, fill=TEXT)
+              lbl = 'alive'
+              lw = text_w(lbl, font_label)
+              draw.text((cx - lw / 2, col_y + 320), lbl, font=font_label, fill=MUTED)
+
+          draw_col(left_cx,  'Kevin', k_alive, KEVIN)
+          draw_col(right_cx, 'Derek', d_alive, DEREK)
+
+          # vs in middle
+          vs = 'vs'
+          vw = text_w(vs, font_vs)
+          draw.text(((W - vw) / 2, col_y + 150), vs, font=font_vs, fill=MUTED)
+
+          # Footer: updated date
+          updated = today.strftime('Updated %b %d, %Y')
+          uw = text_w(updated, font_foot)
+          draw.text(((W - uw) / 2, H - 70), updated, font=font_foot, fill=MUTED)
+
+          os.makedirs('.', exist_ok=True)
+          img.save('og-image.png', 'PNG', optimize=True)
+          print('Wrote og-image.png')
+          PYEOF
+
+      - name: Commit updated image
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add og-image.png
+          if git diff --staged --quiet; then
+            echo "No image changes to commit"
+          else
+            git commit -m "chore: update OG image [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git push
+          fi
