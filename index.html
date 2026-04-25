@@ -208,6 +208,14 @@
     .hof-table td.year { font-weight: 700; width: 56px; }
     .hof-table td.team { width: 90px; color: var(--text-dim); white-space: nowrap; }
     .hof-table td.unpaid { color: #ef4444; font-style: italic; }
+    .hof-table th.bill { white-space: normal; line-height: 1.15; text-align: right; }
+    .hof-table td.bill { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    @media (max-width: 560px) {
+      .hof-table { font-size: 0.76rem; }
+      .hof-table th, .hof-table td { padding: 6px 5px; }
+      .hof-table td.year { width: 44px; }
+      .hof-table td.team { width: auto; }
+    }
     .hof-table tr.defending td { background: rgba(34, 197, 94, 0.08); }
     .hof-winner-kevin { color: var(--kevin); font-weight: 600; }
     .hof-winner-derek { color: var(--derek); font-weight: 600; }
@@ -2627,7 +2635,7 @@ const HOF_HISTORY = [
   { year: 2018, winner: 'Kevin', team: 'GSW', dinner: 'Vestry (NY)',        paid: true, value: 228.21 },
   { year: 2017, winner: 'Derek', team: 'GSW', dinner: 'Kochi (NY)',         paid: true, value: 216.81 },
   { year: 2016, winner: 'Kevin', team: 'CLE', dinner: 'Ikoyi (London)',     paid: true, value: 161.21 },
-  { year: 2015, winner: 'Kevin', team: 'GSW', dinner: 'IHOP (Alamogordo)',  paid: true, value: 145.23 },
+  { year: 2015, winner: 'Kevin', team: 'GSW', dinner: 'Campton Place Bar and Bistro (San Francisco)', paid: true, value: 145.23 },
   { year: 2014, winner: 'Derek', team: 'SAS', dinner: 'Venice',             paid: true, value: 135.13 },
   { year: 2013, winner: 'Kevin', team: 'MIA', dinner: "Ruth's Chris (Seattle)", paid: true, value: 100.00 },
 ];
@@ -2674,13 +2682,13 @@ function renderHallOfFame() {
       const repeatMark = repeatTeams[h.team] > 1 ? ` <span style="color:var(--text-dim);font-size:0.72rem">×${repeatTeams[h.team]}</span>` : '';
       const dinnerCell = h.paid
         ? `${h.dinner}${h.paidNote ? ` <span class="hof-paid-note">(${h.paidNote})</span>` : ''}`
-        : `<span class="unpaid">unpaid</span>`;
+        : `<span class="unpaid">Unpaid</span>`;
       return `<tr class="${cls}">
         <td class="year">${h.year}</td>
         <td class="${winCls}">${h.winner}${crown}</td>
         <td class="team">${h.team}${repeatMark}</td>
         <td>${dinnerCell}</td>
-        <td style="white-space:nowrap">${fmt(h.value)}</td>
+        <td class="bill">${fmt(h.value)}</td>
       </tr>`;
     }).join('');
 
@@ -2689,7 +2697,7 @@ function renderHallOfFame() {
     bodyHTML = `
       <div class="hof-body">
         <table class="hof-table">
-          <thead><tr><th>Year</th><th>Winner</th><th>Team</th><th>Dinner</th><th title="${tooltip}" style="cursor:help;text-decoration:underline dotted;text-underline-offset:3px;white-space:nowrap">Winner's Bill</th></tr></thead>
+          <thead><tr><th>Year</th><th>Winner</th><th>Team</th><th>Dinner</th><th class="bill" title="${tooltip}" style="cursor:help;text-decoration:underline dotted;text-underline-offset:3px">Winner's<br>Bill</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="hof-stats">
