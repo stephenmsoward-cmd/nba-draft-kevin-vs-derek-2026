@@ -1,23 +1,23 @@
 {
-  "ts": 1777190857976,
-  "updatedAt": "2026-04-26T08:07:37.976660+00:00",
+  "ts": 1777245958398,
+  "updatedAt": "2026-04-26T23:25:58.398595+00:00",
   "source": "espn-futures-page",
   "probs": {
-    "Oklahoma City Thunder": 0.5454545454545454,
-    "Boston Celtics": 0.16666666666666666,
-    "San Antonio Spurs": 0.15384615384615385,
-    "Cleveland Cavaliers": 0.0625,
+    "Oklahoma City Thunder": 0.5348837209302325,
+    "San Antonio Spurs": 0.18181818181818182,
+    "Boston Celtics": 0.15384615384615385,
+    "Cleveland Cavaliers": 0.05555555555555555,
     "Denver Nuggets": 0.043478260869565216,
+    "Detroit Pistons": 0.038461538461538464,
     "New York Knicks": 0.034482758620689655,
-    "Detroit Pistons": 0.034482758620689655,
     "Los Angeles Lakers": 0.034482758620689655,
-    "Minnesota Timberwolves": 0.01098901098901099,
-    "Atlanta Hawks": 0.006622516556291391,
+    "Atlanta Hawks": 0.0070921985815602835,
+    "Minnesota Timberwolves": 0.004975124378109453,
     "Orlando Magic": 0.00398406374501992,
-    "Philadelphia 76ers": 0.0024937655860349127,
+    "Philadelphia 76ers": 0.0033222591362126247,
+    "Toronto Raptors": 0.0024937655860349127,
     "Houston Rockets": 0.0016638935108153079,
-    "Toronto Raptors": 0.0014265335235378032,
-    "Portland Trail Blazers": 0.000999000999000999,
-    "Phoenix Suns": 0.0006662225183211193
+    "Phoenix Suns": 0.0006662225183211193,
+    "Portland Trail Blazers": 0.0006662225183211193
   }
 }
