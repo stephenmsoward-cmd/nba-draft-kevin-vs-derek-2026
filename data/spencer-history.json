@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-04-27T17:56:57.478850+00:00",
+  "updatedAt": "2026-04-28T19:11:52.263085+00:00",
   "entries": [
+    {
+      "date": "2026-04-28",
+      "templateId": "elim",
+      "variantIdx": 2,
+      "text": "BOS up 3-1 and closing teams don't blink. Book it \u2014 BOS finishes the job.",
+      "pick": "BOS",
+      "aA": "PHI",
+      "hA": "BOS",
+      "result": null
+    },
     {
       "date": "2026-04-27",
       "templateId": "elim",
@@ -9,7 +19,7 @@
       "pick": "OKC",
       "aA": "OKC",
       "hA": "PHX",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-04-26",
