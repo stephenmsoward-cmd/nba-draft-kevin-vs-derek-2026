@@ -205,16 +205,25 @@
       font-size: 0.68rem;
       letter-spacing: 0.06em;
     }
-    .hof-table td.year { font-weight: 700; width: 56px; }
-    .hof-table td.team { width: 90px; color: var(--text-dim); white-space: nowrap; }
+    .hof-table col.year   { width: 60px; }
+    .hof-table col.winner { width: 100px; }
+    .hof-table col.team   { width: 96px; }
+    .hof-table col.dinner { width: auto; }
+    .hof-table col.bill   { width: 110px; }
+    .hof-table td.year { font-weight: 700; }
+    .hof-table td.winner { white-space: nowrap; }
+    .hof-table td.team { color: var(--text-dim); white-space: nowrap; }
+    .hof-table td.dinner { color: var(--text); }
     .hof-table td.unpaid { color: #ef4444; font-style: italic; }
     .hof-table th.bill { white-space: normal; line-height: 1.15; text-align: right; }
     .hof-table td.bill { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     @media (max-width: 560px) {
       .hof-table { font-size: 0.76rem; }
       .hof-table th, .hof-table td { padding: 6px 5px; }
-      .hof-table td.year { width: 44px; }
-      .hof-table td.team { width: auto; }
+      .hof-table col.year   { width: 44px; }
+      .hof-table col.winner { width: auto; }
+      .hof-table col.team   { width: auto; }
+      .hof-table col.bill   { width: auto; }
     }
     .hof-table tr.defending td { background: rgba(34, 197, 94, 0.08); }
     .hof-winner-kevin { color: var(--kevin); font-weight: 600; }
@@ -383,9 +392,10 @@
 
     .draft-row { border-bottom: 1px solid var(--bg); }
     .draft-row:last-child { border-bottom: none; }
-    .draft-row.eliminated { opacity: 0.28; }
-    .draft-row.no-playoffs { opacity: 0.2; }
-    .draft-row.eliminated .dr-abbr { text-decoration: line-through; }
+    .draft-row.eliminated,
+    .draft-row.no-playoffs { opacity: 0.28; }
+    .draft-row.eliminated .dr-abbr,
+    .draft-row.no-playoffs .dr-abbr { text-decoration: line-through; }
 
     .dr-pick   { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
     .dr-abbr   { font-size: 0.88rem; font-weight: 800; }
@@ -2685,9 +2695,9 @@ function renderHallOfFame() {
         : `<span class="unpaid">Unpaid</span>`;
       return `<tr class="${cls}">
         <td class="year">${h.year}</td>
-        <td class="${winCls}">${h.winner}${crown}</td>
+        <td class="winner ${winCls}">${h.winner}${crown}</td>
         <td class="team">${h.team}${repeatMark}</td>
-        <td>${dinnerCell}</td>
+        <td class="dinner">${dinnerCell}</td>
         <td class="bill">${fmt(h.value)}</td>
       </tr>`;
     }).join('');
@@ -2697,6 +2707,9 @@ function renderHallOfFame() {
     bodyHTML = `
       <div class="hof-body">
         <table class="hof-table">
+          <colgroup>
+            <col class="year"><col class="winner"><col class="team"><col class="dinner"><col class="bill">
+          </colgroup>
           <thead><tr><th>Year</th><th>Winner</th><th>Team</th><th>Dinner</th><th class="bill" title="${tooltip}" style="cursor:help;text-decoration:underline dotted;text-underline-offset:3px">Winner's<br>Bill</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>

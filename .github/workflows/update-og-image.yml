@@ -185,5 +185,11 @@ jobs:
             echo "No image changes to commit"
           else
             git commit -m "chore: update OG image [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            # Retry push with rebase to handle races with sibling workflows
+            for i in 1 2 3; do
+              if git push; then exit 0; fi
+              echo "Push failed (attempt $i), pulling --rebase and retrying..."
+              git pull --rebase origin main
+            done
             git push
           fi
