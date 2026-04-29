@@ -189,7 +189,8 @@
       border-top: 1px solid var(--border);
     }
     .hof-table {
-      width: 100%;
+      width: auto;
+      max-width: 100%;
       border-collapse: collapse;
       font-size: 0.82rem;
     }
@@ -218,7 +219,7 @@
     .hof-table th.bill { white-space: normal; line-height: 1.15; text-align: right; }
     .hof-table td.bill { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     @media (max-width: 560px) {
-      .hof-table { font-size: 0.76rem; }
+      .hof-table { width: 100%; font-size: 0.76rem; }
       .hof-table th, .hof-table td { padding: 6px 5px; }
       .hof-table col.year   { width: 44px; }
       .hof-table col.winner { width: auto; }
@@ -2035,8 +2036,9 @@ function renderTeams(elim, inPlayoffs) {
     const isElim = elim.has(abbr);
     const rowCls = isElim ? 'eliminated' : (!inP && knownPlayoffs ? 'no-playoffs' : '');
     const ownerCls_ = owner === 'Kevin' ? 'owner-kevin' : 'owner-derek';
-    const statusCls = isElim ? 's-elim' : (!inP && knownPlayoffs ? 's-none' : 's-alive');
-    const statusTxt = isElim ? 'Eliminated' : (!inP && knownPlayoffs ? '—' : 'Alive');
+    const isDead = isElim || (!inP && knownPlayoffs);
+    const statusCls = isDead ? 's-elim' : 's-alive';
+    const statusTxt = isDead ? 'Dead' : 'Alive';
 
     return `
       <div class="draft-row ${rowCls}">
