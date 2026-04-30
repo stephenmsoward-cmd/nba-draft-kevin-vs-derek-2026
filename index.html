@@ -2605,6 +2605,14 @@ function renderSideBet(result, cached = false, cachedTs = null) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────
+// Yield to the browser between heavy synchronous renders so input
+// events (clicks, taps) can paint a response without waiting for the
+// whole pipeline to finish. Improves INP.
+const yieldToMain = () =>
+  (typeof scheduler !== 'undefined' && scheduler.yield)
+    ? scheduler.yield()
+    : new Promise(r => setTimeout(r, 0));
+
 async function loadData() {
   const btn = document.getElementById('refresh-btn');
   btn.disabled = true;
@@ -2630,13 +2638,17 @@ async function loadData() {
     cachedClinched = updateClinched(sm);
 
     renderScoreboard(elim, inP, sm);
+    await yieldToMain();
     renderSideBet(calcSideBet(freshOdds, elim, inP), false, null);
     renderRoundProgress(sm);
+    await yieldToMain();
     renderBracket(sm);
+    await yieldToMain();
     await renderLiveGames(liveEvents, sm);
     // If no games today, look at tomorrow's slate so Kabeer can pick a relevant team
     const upcomingForDesk = liveEvents.length ? null : await findUpcomingGames(3);
     renderDesk(liveEvents, sm, upcomingForDesk);
+    await yieldToMain();
     renderTeams(elim, inP);
     const hist = updateHistory(elim, inP);
     renderRaceChart(hist);
@@ -2645,12 +2657,15 @@ async function loadData() {
     document.getElementById('last-updated').textContent =
       `Updated ${now.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
 
-    localStorage.setItem('nba26-cache', JSON.stringify({
+    // Defer cache write — it's not on the user's critical path.
+    const writeCache = () => localStorage.setItem('nba26-cache', JSON.stringify({
       series:      [...sm.entries()],
       elim:        [...elim],
       inPlayoffs:  [...inP],
       ts:          Date.now(),
     }));
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(writeCache);
+    else setTimeout(writeCache, 0);
 
   } catch (err) {
     document.getElementById('error-container').innerHTML =
