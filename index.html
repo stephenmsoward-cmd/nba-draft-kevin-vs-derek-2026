@@ -968,6 +968,37 @@
       margin-left: 6px;
     }
 
+    /* Series storyline badges (top-right of card) */
+    .series-card { position: relative; }
+    .storyline-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 7px 2px 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .storyline-badge.closeout { background: rgba(239,68,68,0.14); color: #fca5a5; border-color: rgba(239,68,68,0.4); }
+    .storyline-badge.sweep    { background: rgba(168,85,247,0.14); color: #d8b4fe; border-color: rgba(168,85,247,0.4); }
+    .storyline-badge.game7    { background: rgba(234,179,8,0.16);  color: #fde68a; border-color: rgba(234,179,8,0.45); }
+    .storyline-badge.pivot    { background: rgba(59,130,246,0.14); color: #93c5fd; border-color: rgba(59,130,246,0.4); }
+
+    /* Confetti canvas */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
     /* Biggest swing */
     /* The Desk — daily commentary */
     .desk-grid {
@@ -1451,6 +1482,102 @@ function renderRoundProgress(sm) {
 
 // ── Just-clinched tracking ────────────────────────────────────────────
 const CLINCHED_KEY = 'nba26-clinched';
+const CONFETTI_KEY = 'nba26-confetti-seen';
+
+// ── Confetti ─────────────────────────────────────────────────────────
+// Tiny vanilla implementation — fires when this viewer opens the page
+// after a series has clinched that they haven't seen yet. Color tinted
+// to whichever player benefited (Kevin = blue, Derek = red, neutral
+// otherwise).
+function fireConfetti(palette) {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  let canvas = document.getElementById('confetti-canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'confetti-canvas';
+    document.body.appendChild(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = window.innerWidth  * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width  = window.innerWidth  + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.scale(dpr, dpr);
+
+  const W = window.innerWidth, H = window.innerHeight;
+  const colors = palette || ['#3b82f6','#ef4444','#22c55e','#eab308','#a855f7'];
+  const N = 140;
+  const parts = [];
+  for (let i = 0; i < N; i++) {
+    parts.push({
+      x: W / 2 + (Math.random() - 0.5) * 160,
+      y: -20 - Math.random() * 80,
+      vx: (Math.random() - 0.5) * 8,
+      vy: 4 + Math.random() * 6,
+      sz: 6 + Math.random() * 6,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.3,
+      c: colors[(Math.random() * colors.length) | 0],
+    });
+  }
+  const t0 = performance.now();
+  function tick(now) {
+    const t = now - t0;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of parts) {
+      p.vy += 0.15;          // gravity
+      p.vx *= 0.995;
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.sz / 2, -p.sz / 4, p.sz, p.sz / 2);
+      ctx.restore();
+    }
+    if (t < 4000) requestAnimationFrame(tick);
+    else canvas.remove();
+  }
+  requestAnimationFrame(tick);
+}
+
+// Detect series this viewer hasn't celebrated yet, and fire confetti.
+function celebrateNewClinches(sm) {
+  if (!sm || !sm.size) return;
+  let seen = {};
+  try { seen = JSON.parse(localStorage.getItem(CONFETTI_KEY) || '{}'); } catch {}
+  // Prune entries older than 48h (well past the 24h "just clinched" window)
+  const now = Date.now(), TTL = 48 * 60 * 60 * 1000;
+  for (const k of Object.keys(seen)) if (now - seen[k] > TTL) delete seen[k];
+
+  const newClinches = [];
+  for (const s of sm.values()) {
+    if (s.completed && cachedClinched.has(s.key) && !seen[s.key]) {
+      newClinches.push(s);
+      seen[s.key] = now;
+    }
+  }
+  localStorage.setItem(CONFETTI_KEY, JSON.stringify(seen));
+  if (!newClinches.length) return;
+
+  // Pick a palette based on who benefited from the most-recent clinch.
+  // Owner of the *advancing* team wins.
+  const last = newClinches[0];
+  const winner = last.awayWins >= 4 ? last.awayAbbr : last.homeAbbr;
+  const owner  = getOwner(winner);
+  const palette = owner === 'Kevin'
+    ? ['#3b82f6','#60a5fa','#93c5fd','#dbeafe']
+    : owner === 'Derek'
+      ? ['#ef4444','#f87171','#fca5a5','#fee2e2']
+      : null;
+  // Stagger if multiple clinched at once.
+  newClinches.forEach((_, i) => setTimeout(() => fireConfetti(palette), i * 600));
+}
+
 function updateClinched(sm) {
   // Returns set of series keys that were clinched within last 24h
   let store = {};
@@ -1965,6 +2092,19 @@ function toggleRound(round) {
 }
 
 let cachedClinched = new Set();
+// Series storyline badge — picks the most exciting state and labels it.
+// Only shown for live (incomplete) series.
+function storylineBadge(s) {
+  if (s.completed) return '';
+  const lead  = Math.max(s.awayWins, s.homeWins);
+  const trail = Math.min(s.awayWins, s.homeWins);
+  if (lead === 3 && trail === 3) return '<div class="storyline-badge game7">🎲 Game 7</div>';
+  if (lead === 3 && trail === 0) return '<div class="storyline-badge sweep">🧹 Sweep Watch</div>';
+  if (lead === 3)                return '<div class="storyline-badge closeout">🔪 Closeout</div>';
+  if (lead === 2 && trail === 2) return '<div class="storyline-badge pivot">🎢 2-2 Pivot</div>';
+  return '';
+}
+
 function seriesCardHTML(s, elim) {
   const aoOwner = getOwner(s.awayAbbr);
   const hoOwner = getOwner(s.homeAbbr);
@@ -1973,8 +2113,10 @@ function seriesCardHTML(s, elim) {
   const homeWon = s.completed && s.homeWins >= 4;
   const totalGames = s.awayWins + s.homeWins;
   const justClinched = s.completed && cachedClinched.has(s.key);
+  const badge = storylineBadge(s);
   return `
     <div class="series-card ${s.completed ? 'series-over' : ''} ${justClinched ? 'just-clinched' : ''}">
+      ${badge}
       <div class="series-body">
         <div class="series-team-block">
           <div class="series-team-abbr ${elim.has(s.awayAbbr) ? 'elim' : ''}">${s.awayAbbr}</div>
@@ -2636,6 +2778,7 @@ async function loadData() {
     cachedInPlayoffs = inP;
     cachedOddsMap  = freshOdds;
     cachedClinched = updateClinched(sm);
+    celebrateNewClinches(sm);
 
     renderScoreboard(elim, inP, sm);
     await yieldToMain();
