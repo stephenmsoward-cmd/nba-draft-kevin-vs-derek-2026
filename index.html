@@ -469,11 +469,15 @@
       display: flex;
       align-items: center;
       gap: 5px;
-      padding: 0 9px;
+      padding: 0 12px;
       font-size: 0.75rem;
       position: relative;
       white-space: nowrap;
     }
+    /* West side connectors come in on the LEFT, so give those slots
+       an extra nudge so text doesn't crowd the round divider. */
+    .west-round .b-slot { padding-left: 14px; }
+    .east-round .b-slot { padding-right: 14px; }
 
     /* Card wraps both slots */
     .b-card {
@@ -968,28 +972,30 @@
       margin-left: 6px;
     }
 
-    /* Series storyline badges (top-right of card) */
+    /* Series storyline badges */
     .series-card { position: relative; }
+    .b-matchup   { position: relative; }
     .storyline-badge {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      font-size: 0.6rem;
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 0.55rem;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      padding: 2px 7px 2px 5px;
+      padding: 2px 7px;
       border-radius: 999px;
       background: rgba(255,255,255,0.06);
       color: var(--text-dim);
       border: 1px solid var(--border);
       white-space: nowrap;
       pointer-events: none;
+      line-height: 1.4;
     }
     .storyline-badge.closeout { background: rgba(239,68,68,0.14); color: #fca5a5; border-color: rgba(239,68,68,0.4); }
     .storyline-badge.sweep    { background: rgba(168,85,247,0.14); color: #d8b4fe; border-color: rgba(168,85,247,0.4); }
     .storyline-badge.game7    { background: rgba(234,179,8,0.16);  color: #fde68a; border-color: rgba(234,179,8,0.45); }
     .storyline-badge.pivot    { background: rgba(59,130,246,0.14); color: #93c5fd; border-color: rgba(59,130,246,0.4); }
+    .storyline-badge.tight    { background: rgba(255,255,255,0.04); color: var(--text-dim); border-color: var(--border); }
 
     /* Confetti canvas */
     #confetti-canvas {
@@ -2328,6 +2334,23 @@ function bSlot(abbr, seed, isWin, isElim) {
   </div>`;
 }
 
+// Storyline badge for an active bracket matchup. score is "L-T" with
+// the leader's wins first; for ties it's "N-N".
+function bracketBadge(score, completed) {
+  if (!score || completed) return '';
+  const m = /^(\d+)[–-](\d+)$/.exec(score);
+  if (!m) return '';
+  const lead  = +m[1], trail = +m[2];
+  if (lead === 3 && trail === 3) return '<div class="storyline-badge game7">🎲 Game 7</div>';
+  if (lead === 3 && trail === 0) return '<div class="storyline-badge sweep">🧹 Sweep Watch</div>';
+  if (lead === 3)                return '<div class="storyline-badge closeout">🔪 Closeout</div>';
+  if (lead === 2 && trail === 2) return '<div class="storyline-badge pivot">🎢 2-2 Pivot</div>';
+  if (lead === 2 && trail === 1) return '<div class="storyline-badge tight">⚔️ 2-1</div>';
+  if (lead === 2 && trail === 0) return '<div class="storyline-badge tight">📈 2-0 Lead</div>';
+  if (lead === 1 && trail === 1) return '<div class="storyline-badge tight">🪢 Tied 1-1</div>';
+  return '';
+}
+
 function bMatchup(m) {
   const tW = m.winner === m.t, bW = m.winner === m.b;
 
@@ -2347,6 +2370,7 @@ function bMatchup(m) {
     infoText = m.summary;
   }
 
+  const badge = bracketBadge(m.score, m.completed);
   const cardCls = m.winner ? 'b-card b-card-done' : 'b-card';
   return `<div class="b-matchup">
     <div class="b-series-info" style="color:${infoText ? infoColor : 'transparent'}">${infoText || '·'}</div>
@@ -2354,6 +2378,7 @@ function bMatchup(m) {
       ${bSlot(m.t, m.ts, tW, m.winner && !tW)}
       ${bSlot(m.b, m.bs, bW, m.winner && !bW)}
     </div>
+    ${badge}
   </div>`;
 }
 
