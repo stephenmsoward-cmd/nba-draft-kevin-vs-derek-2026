@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-04-30T18:54:32.247293+00:00",
+  "updatedAt": "2026-05-01T17:37:15.027770+00:00",
   "entries": [
+    {
+      "date": "2026-05-01",
+      "templateId": "elim",
+      "variantIdx": 2,
+      "text": "ORL up 3-2 and closing teams don't blink. Book it \u2014 ORL finishes the job.",
+      "pick": "ORL",
+      "aA": "DET",
+      "hA": "ORL",
+      "result": null
+    },
     {
       "date": "2026-04-30",
       "templateId": "elim",
@@ -9,7 +19,7 @@
       "pick": "NYK",
       "aA": "NYK",
       "hA": "ATL",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-04-29",
