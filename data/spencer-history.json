@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-01T17:37:15.027770+00:00",
+  "updatedAt": "2026-05-02T16:32:06.694317+00:00",
   "entries": [
+    {
+      "date": "2026-05-02",
+      "templateId": "elim",
+      "variantIdx": 3,
+      "text": "Closeout night for None. The hardest game to win is supposed to be the fourth one \u2014 they got the memo and finish it tonight.",
+      "pick": "BOS",
+      "aA": "PHI",
+      "hA": "BOS",
+      "result": null
+    },
     {
       "date": "2026-05-01",
       "templateId": "elim",
@@ -9,7 +19,7 @@
       "pick": "ORL",
       "aA": "DET",
       "hA": "ORL",
-      "result": null
+      "result": "loss"
     },
     {
       "date": "2026-04-30",
