@@ -121,6 +121,12 @@ jobs:
                       f"Series tipoff at {c['hA']}. Home crowd, fresh legs, prepared coaching staff — that's a {c['hA']} W three different ways.",
                       f"{c['aA']} at {c['hA']}, Game 1. Openers are about who's ready, not who's better — {c['hA']} looks ready.",
                       f"Game 1 at {c['hA']}. First quarter sets the tone, fourth quarter locks it in — {c['hA']} by 7.",
+                      f"{c['hA']} hosts Game 1. The first 8 minutes will tell the story — they win them, and the rest of the night, by 9.",
+                      f"Opener at {c['hA']}. Playoff atmosphere is its own player — {c['hA']} starts plus-12 before tipoff.",
+                      f"{c['aA']} at {c['hA']}, Game 1. Series openers favor the team with the better bench. {c['hA']}'s second unit shows up tonight.",
+                      f"Game 1 at {c['hA']}. Whichever team controls the paint controls the series — {c['hA']} sets that tone tonight.",
+                      f"{c['hA']} home for Game 1. Series openers are won at the free-throw line — {c['hA']} gets the calls and the win.",
+                      f"Game 1, {c['aA']} at {c['hA']}. Coaches script the first 6 plays. {c['hA']}'s script lands.",
                   ],
                   'elim': [
                       f"{c['trailing']} faces elimination against {c['leader']}. Desperation buys one game, not four — {c['leader']} closes it out tonight.",
@@ -131,6 +137,12 @@ jobs:
                       f"Cinderella's coach is about to turn into a pumpkin. {c['leader']} ends the series and starts next-round prep tomorrow.",
                       f"{c['leader']} up 3-{c['trailW']}, road or home doesn't matter. {c['trailing']}'s tank is empty — series ends tonight.",
                       f"Closeout games go to the team with less to lose, and that's {c['leader']}. Series over.",
+                      f"{c['leader']} clinches tonight. {c['trailing']} has been on borrowed time since Game 2 — the bill comes due.",
+                      f"{c['leader']}'s starters get a 30-minute night, the bench gets the rest, and the series gets a closing time.",
+                      f"{c['trailing']} needed three perfect games to come back. They've played one good half. Math says {c['leader']}.",
+                      f"{c['leader']} 3-{c['trailW']}, walking into a closeout. The locker-room mood is 'finish.' The scoreboard agrees.",
+                      f"{c['trailing']} is the lower seed playing the favorite. Eventually math wins, and tonight is eventually. {c['leader']} ends it.",
+                      f"Closeout time for {c['leader']}. They've been the better team for four games. They'll be the better team for one more.",
                   ],
                   'pivot22': [
                       f"{c['aA']} vs {c['hA']} tied 2-2 — effectively a best-of-three now. Game 5 winners take the series 82% of the time, and {c['hA']} grabs it tonight.",
@@ -141,6 +153,12 @@ jobs:
                       f"2-2 reset, Game 5 at {c['hA']}. Home court matters most right here, and {c['hA']} cashes it.",
                       f"{c['hA']} for Game 5, series tied. This is the one that decides it — {c['hA']} responds with their best game of the series.",
                       f"Tied 2-2, back home for Game 5. {c['hA']} circles this game and plays its best — wins by 9.",
+                      f"Game 5 at {c['hA']}, series knotted. The 2-2 home team in this spot wins 70% historically — and {c['hA']} doesn't fight history.",
+                      f"2-2 series, swing game at {c['hA']}. The team that wants it more wins, and {c['hA']} wants it more.",
+                      f"Pivot game in {c['hA']}. The role players have figured out the matchups by now — {c['hA']}'s bench tilts this one.",
+                      f"{c['aA']} on the road for Game 5 of a 2-2 series. They've been outscored when it matters — {c['hA']} keeps that trend.",
+                      f"Game 5, 2-2, at {c['hA']}. Stars play 40 minutes apiece, {c['hA']}'s stars are slightly better, {c['hA']} wins.",
+                      f"Series tied 2-2, Game 5 at {c['hA']}. Home crowd, defensive intensity, fourth-quarter execution — three for three for {c['hA']}.",
                   ],
                   'tied11': [
                       f"Series knotted 1-1, {c['aA']} at {c['hA']}. Game 3 is the momentum pivot — {c['hA']} protects home court and flips the series lead.",
@@ -151,6 +169,12 @@ jobs:
                       f"1-1 series, {c['aA']} on the road. Game 3 goes to the home team about 70% of the time — {c['hA']} cashes that.",
                       f"{c['aA']} at {c['hA']}, Game 3, series tied. Adjustments are {c['hA']}'s to make at home — they make 'em, they win.",
                       f"Game 3, fresh slate. {c['hA']} on home floor protects business and grabs the series lead.",
+                      f"1-1 series, swing back to {c['hA']}. Home Game 3 is the loudest tip of the playoffs — {c['hA']} rides it.",
+                      f"{c['hA']} hosting Game 3 of a 1-1 series. Their starters get the matchup they want — {c['hA']} by 7.",
+                      f"Game 3 at {c['hA']}, knotted at one apiece. The home team takes Game 3 of a tied series 65%+ in the modern era. {c['hA']} hits the average.",
+                      f"Tied 1-1, Game 3 at {c['hA']}. {c['aA']} burned its road equity in Game 1 — {c['hA']} cashes it back tonight.",
+                      f"Series tied, {c['hA']} home for Game 3. They lost the toss-up and won the must-win on the road — they win this one too.",
+                      f"{c['aA']} at {c['hA']}, Game 3, 1-1. Coaches sleep on adjustments — {c['hA']} wakes up with the better ones.",
                   ],
                   'lead21': [
                       f"{c['leader']} up 2-1 heading into Game 4. {c['trailing']} has to hold serve or it's effectively over — {c['trailing']} survives tonight to force 2-2.",
@@ -161,6 +185,12 @@ jobs:
                       f"{c['trailing']} down 2-1 at home. The locker room speech writes itself — {c['trailing']} answers and ties the series.",
                       f"Series at 2-1, road team {c['leader']}. Game 4 belongs to {c['trailing']} — desperation wins one in playoff basketball.",
                       f"{c['trailing']} hosts Game 4 trailing 2-1. Their best game of the series happens tonight — wins by 6.",
+                      f"{c['leader']} up 2-1, but {c['trailing']}'s home crowd flips one. Series tied after tonight.",
+                      f"{c['trailing']} down 2-1 at home. They go small, they go fast, they go to 2-2.",
+                      f"Game 4 in {c['trailing']}. The team facing 3-1 wins this game way more than half the time — {c['trailing']} keeps the streak.",
+                      f"{c['leader']} 2-1 on the road. {c['trailing']} flips the script with a 12-point home win.",
+                      f"{c['trailing']} hosts a must-win and looks the part. {c['trailing']} 2-2 by the end of the night.",
+                      f"Game 4 at {c['trailing']}. Stars score, role players show up, crowd never sits — {c['trailing']} ties it.",
                   ],
                   'lead20': [
                       f"{c['leader']} up 2-0 on {c['trailing']}. Teams down 2-0 win the series just 6% of the time — {c['trailing']} steals one at home to avoid the sweep scare.",
@@ -171,6 +201,12 @@ jobs:
                       f"Game 3 at {c['trailing']}. They've played this script before — desperate at home, they take it by 5+.",
                       f"Down 2-0, the season's on a tightrope. {c['trailing']} plays its best half of the series and wins Game 3.",
                       f"{c['leader']} 2-0, but travel and crowd flip Game 3 — {c['trailing']} steals it and makes it a series.",
+                      f"{c['trailing']} home for Game 3, down 2-0. Ego wins one — {c['trailing']} by 6.",
+                      f"Game 3 at {c['trailing']}, season on a string. They play their best basketball when the math is grim — {c['trailing']} W.",
+                      f"{c['leader']} up 2-0 visiting Game 3. Sweep talk has been on radio all week. {c['trailing']} silences it.",
+                      f"{c['trailing']} down 2-0 at home. The home Game 3 in this spot is a coin flip — and {c['trailing']} flips heads.",
+                      f"Down 2-0, Game 3 at home. {c['trailing']} starts plus-9 and wins by 4.",
+                      f"{c['leader']} 2-0 to {c['trailing']}'s building. Roles flip on the road — {c['trailing']} takes Game 3 and a deep breath.",
                   ],
                   'stole1': [
                       f"{c['leader']} stole Game 1. Expect {c['trailing']} to answer back at home and even the series 1-1 before the road trip.",
@@ -181,6 +217,12 @@ jobs:
                       f"Down 0-1 at home for Game 2. {c['trailing']} can't afford an 0-2 trip — they play their best game of the series and win.",
                       f"{c['trailing']} dropped the opener. Coaches earn their salary in Game 2 — {c['trailing']} responds and ties it up.",
                       f"{c['leader']} stole one, but Game 2 belongs to the home team. {c['trailing']} corrects course and evens the series.",
+                      f"{c['trailing']} lost Game 1 at home. They wake up angry — Game 2 by 11.",
+                      f"{c['leader']} stole the opener. {c['trailing']} closes the loophole and takes Game 2 going away.",
+                      f"Game 2 at {c['trailing']}, series 0-1. The home team in this spot wins 75%+ historically — {c['trailing']} keeps the trend.",
+                      f"{c['leader']} took advantage of nerves in Game 1. Game 2 is the calmer team's win — and that's {c['trailing']}.",
+                      f"{c['trailing']} 0-1 at home. They simplify the offense, lock down the perimeter, win by double digits.",
+                      f"Game 2 at {c['trailing']}. Coaches always win Game 2 of a 0-1 home series — {c['trailing']} cashes the historical pattern.",
                   ],
                   'fallback': [
                       f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['leaderLabel']} — {c['pick']} takes this one by double digits.",
@@ -191,6 +233,12 @@ jobs:
                       f"Game {c['game']}, {c['aA']} at {c['hA']}. {c['leaderLabel']} — that team takes it tonight.",
                       f"{c['aA']} at {c['hA']}, Game {c['game']}. Lockdown defense in the fourth, {c['pick']} wins by 6.",
                       f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['pick']} executes in crunch time and walks away with it.",
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['pick']}'s stars get to their spots — that's the ballgame.",
+                      f"Game {c['game']} between {c['aA']} and {c['hA']}. {c['pick']} wins the turnover battle and the scoreboard.",
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. Three-point shooting decides this one — {c['pick']} hits enough.",
+                      f"Game {c['game']}, {c['aA']} at {c['hA']}. {c['pick']} takes the second quarter, takes the lead, takes the win.",
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. The team with the better closer takes it. {c['pick']} closes.",
+                      f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['pick']} plays a clean fourth quarter — that's all they need.",
                   ],
               }
 
@@ -204,7 +252,12 @@ jobs:
               if leadW == 1 and trailW == 0 and game == 2: return 'stole1'
               return 'fallback'
 
-          def generate_for_today(today_events, series, prior):
+          def is_clean(t):
+              # Reject if a template interpolated a missing value as None.
+              if not isinstance(t, str) or not t: return False
+              return not any(tok in t for tok in (' None ', 'None.', 'None,', 'None — ', 'None—', "None's", 'None up'))
+
+          def generate_for_today(today_events, series, recent):
               non_post = [ev for ev in today_events
                           if ((ev.get('competitions') or [{}])[0].get('status', {}).get('type', {}) or {}).get('state') != 'post']
               if not non_post: return None
@@ -212,6 +265,7 @@ jobs:
               for ev in non_post:
                   mu = matchup(ev)
                   if not mu: continue
+                  if not mu['aA'] or not mu['hA']: continue
                   st = game_stakes(mu['aA'], mu['hA'], series)
                   if not best or st['score'] > best['st']['score']:
                       best = {'aA': mu['aA'], 'hA': mu['hA'], 'st': st}
@@ -228,14 +282,28 @@ jobs:
                      'leaderLabel': leader_label}
               variants = templates(ctx)[tid]
               today_str = today_et().isoformat()
-              idx = djb2(today_str + tid) % len(variants)
-              if prior and prior.get('templateId') == tid and len(variants) > 1:
-                  idx = (prior.get('variantIdx', 0) + 1) % len(variants)
+
+              # Avoid variants used in the last 5 days for the same template.
+              # Falls back to hash if every variant has been used recently.
+              recent_idxs = {e.get('variantIdx') for e in (recent or [])
+                             if e.get('templateId') == tid and isinstance(e.get('variantIdx'), int)}
+              base_idx = djb2(today_str + tid) % len(variants)
+              idx = base_idx
+              for offset in range(len(variants)):
+                  cand = (base_idx + offset) % len(variants)
+                  if cand not in recent_idxs:
+                      idx = cand
+                      break
+
+              text = variants[idx]
+              if not is_clean(text):
+                  print(f'[gen] Generated text contains None token; skipping: {text!r}')
+                  return None
               return {
                   'date': today_str,
                   'templateId': tid,
                   'variantIdx': idx,
-                  'text': variants[idx],
+                  'text': text,
                   'pick': pick,
                   'aA': aA,
                   'hA': hA,
@@ -290,8 +358,9 @@ jobs:
                   d += timedelta(days=1)
               series = build_series(all_events)
               today_events = fetch_events(today.strftime('%Y%m%d'))
-              prior = entries[0] if entries else None
-              new_entry = generate_for_today(today_events, series, prior)
+              # Pass the last 5 entries so we can avoid recent variant repeats
+              recent = entries[:5] if entries else []
+              new_entry = generate_for_today(today_events, series, recent)
               if new_entry:
                   entries.insert(0, new_entry)
                   entries = entries[:30]
