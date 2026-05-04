@@ -1460,10 +1460,27 @@ function renderRoundProgress(sm) {
   if (!sm || !sm.size) { el.innerHTML = ''; return; }
   const roundOrder = ['1st Round','Conf. Semis','Conf. Finals','NBA Finals'];
   const roundTotals = { '1st Round': 8, 'Conf. Semis': 4, 'Conf. Finals': 2, 'NBA Finals': 1 };
+
+  // Build winners-by-round so we can infer the bucket for any series ESPN
+  // didn't label (those come through tagged 'Playoffs').
+  const winnersByRound = { '1st Round': new Set(), 'Conf. Semis': new Set(), 'Conf. Finals': new Set() };
+  for (const s of sm.values()) {
+    if (!s.completed || s.round === 'Playoffs') continue;
+    if (!winnersByRound[s.round]) continue;
+    const winner = s.awayWins >= 4 ? s.awayAbbr : s.homeAbbr;
+    winnersByRound[s.round].add(winner);
+  }
+  const inferRound = (s) => {
+    if (s.round !== 'Playoffs') return s.round;
+    const a = s.awayAbbr, b = s.homeAbbr;
+    if (winnersByRound['Conf. Semis'].has(a) && winnersByRound['Conf. Semis'].has(b)) return 'NBA Finals';
+    if (winnersByRound['1st Round'].has(a) && winnersByRound['1st Round'].has(b)) return 'Conf. Semis';
+    return '1st Round';
+  };
+
   const groups = {};
   for (const s of sm.values()) {
-    // ESPN sometimes labels 1st Round series as generic 'Playoffs' — treat as 1st Round
-    const r = (s.round === 'Playoffs') ? '1st Round' : s.round;
+    const r = inferRound(s);
     (groups[r] = groups[r] || []).push(s);
   }
   // Active round = first round (in playoff order) that isn't fully complete
