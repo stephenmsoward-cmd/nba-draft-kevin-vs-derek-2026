@@ -1461,20 +1461,33 @@ function renderRoundProgress(sm) {
   const roundOrder = ['1st Round','Conf. Semis','Conf. Finals','NBA Finals'];
   const roundTotals = { '1st Round': 8, 'Conf. Semis': 4, 'Conf. Finals': 2, 'NBA Finals': 1 };
 
-  // Build winners-by-round so we can infer the bucket for any series ESPN
-  // didn't label (those come through tagged 'Playoffs').
-  const winnersByRound = { '1st Round': new Set(), 'Conf. Semis': new Set(), 'Conf. Finals': new Set() };
+  // Infer the round purely from team progression (ignore ESPN's round
+  // labels because they're often missing/generic — every series can come
+  // through tagged 'Playoffs'). A team's prior-series-wins count tells us
+  // their round: 0 prior wins → 1st Round; 1 prior win → Conf. Semis; 2 →
+  // Conf. Finals; 3 → NBA Finals.
+  const priorWins = {};   // abbr → completed series they won (any series)
   for (const s of sm.values()) {
-    if (!s.completed || s.round === 'Playoffs') continue;
-    if (!winnersByRound[s.round]) continue;
+    if (!s.completed) continue;
     const winner = s.awayWins >= 4 ? s.awayAbbr : s.homeAbbr;
-    winnersByRound[s.round].add(winner);
+    priorWins[winner] = (priorWins[winner] || 0) + 1;
   }
   const inferRound = (s) => {
-    if (s.round !== 'Playoffs') return s.round;
-    const a = s.awayAbbr, b = s.homeAbbr;
-    if (winnersByRound['Conf. Semis'].has(a) && winnersByRound['Conf. Semis'].has(b)) return 'NBA Finals';
-    if (winnersByRound['1st Round'].has(a) && winnersByRound['1st Round'].has(b)) return 'Conf. Semis';
+    // For active series, both teams' "prior wins" = wins from earlier
+    // series only. For completed series, subtract this series' win from
+    // the winner so both teams reflect the same starting depth.
+    const aWins = priorWins[s.awayAbbr] || 0;
+    const bWins = priorWins[s.homeAbbr] || 0;
+    let aPrior = aWins, bPrior = bWins;
+    if (s.completed) {
+      const winner = s.awayWins >= 4 ? s.awayAbbr : s.homeAbbr;
+      if (winner === s.awayAbbr) aPrior = aWins - 1;
+      else                       bPrior = bWins - 1;
+    }
+    const depth = Math.min(aPrior, bPrior);
+    if (depth >= 3) return 'NBA Finals';
+    if (depth === 2) return 'Conf. Finals';
+    if (depth === 1) return 'Conf. Semis';
     return '1st Round';
   };
 
