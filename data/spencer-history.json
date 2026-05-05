@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-04T19:06:59.961691+00:00",
+  "updatedAt": "2026-05-05T18:55:58.439352+00:00",
   "entries": [
+    {
+      "date": "2026-05-05",
+      "templateId": "game1",
+      "variantIdx": 12,
+      "text": "DET home for Game 1. Series openers are won at the free-throw line \u2014 DET gets the calls and the win.",
+      "pick": "DET",
+      "aA": "CLE",
+      "hA": "DET",
+      "result": null
+    },
     {
       "date": "2026-05-04",
       "templateId": "game1",
@@ -9,7 +19,7 @@
       "pick": "NYK",
       "aA": "PHI",
       "hA": "NYK",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-05-02",
