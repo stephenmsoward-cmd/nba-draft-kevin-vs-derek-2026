@@ -86,36 +86,6 @@
     .btn:hover { background: var(--border); color: var(--text); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .view-toggle {
-      display: flex;
-      gap: 2px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 3px;
-      flex-shrink: 0;
-    }
-
-    .toggle-btn {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 4px 14px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .toggle-btn.active {
-      background: var(--border);
-      color: var(--text);
-    }
-
-    .toggle-btn:hover:not(.active) { color: var(--text); }
-
     /* Scoreboard */
     .scoreboard {
       display: grid;
@@ -441,85 +411,9 @@
 
     .section-line { flex: 1; height: 1px; background: var(--border); }
 
-    /* Series cards */
-    .matchups-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 12px;
-      margin-bottom: 40px;
-    }
-
-    .series-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-    }
-
-    .series-card.series-over { opacity: 0.6; }
-
-    .round-label {
-      font-size: 0.62rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 12px;
-    }
-
-    .series-body {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .series-team-block {
-      flex: 1;
-      text-align: center;
-      min-width: 0;
-    }
-
-    .series-team-abbr {
-      font-size: 1.3rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    .series-team-abbr.elim {
-      text-decoration: line-through;
-      opacity: 0.35;
-    }
-
-    .series-team-owner {
-      font-size: 0.68rem;
-      font-weight: 700;
-      margin-top: 3px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
     .owner-kevin { color: var(--kevin); }
     .owner-derek { color: var(--derek); }
     .owner-none  { color: var(--muted); }
-
-    .series-score-block { text-align: center; flex-shrink: 0; }
-
-    .series-score {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: var(--text);
-      letter-spacing: 0.02em;
-      min-width: 54px;
-    }
-
-    .series-summary-text {
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-align: center;
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid var(--border);
-    }
 
     /* Teams columns */
     /* Draft picks table */
@@ -739,48 +633,6 @@
     /* Past rounds — dim when complete */
     .b-round.past-round { opacity: 0.3; }
 
-    /* Round groups in Series view */
-    .round-group { margin-bottom: 16px; }
-
-    .round-group-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
-      user-select: none;
-      margin-bottom: 10px;
-      transition: background 0.15s;
-    }
-    .round-group-header:hover { background: var(--surface2); }
-
-    .round-group-title {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text);
-    }
-
-    .round-group-status {
-      font-size: 0.7rem;
-      color: var(--muted);
-      margin-left: auto;
-    }
-
-    .round-group-chevron {
-      font-size: 0.75rem;
-      color: var(--muted);
-      transition: transform 0.2s;
-      display: inline-block;
-    }
-    .round-group-chevron.open { transform: rotate(180deg); }
-
-    .round-group-cards.collapsed { display: none; }
-
     /* Today's Games */
     .games-grid {
       display: grid;
@@ -905,16 +757,6 @@
       color: var(--muted);
       font-size: 0.85rem;
       padding: 4px 0 28px;
-    }
-
-    /* Series win badge */
-    .series-win-badge {
-      font-size: 0.6rem;
-      font-weight: 700;
-      color: var(--green);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-top: 3px;
     }
 
     /* Max Final 4 tooltip */
@@ -1110,30 +952,7 @@
       text-transform: uppercase;
     }
 
-    /* Series just clinched pulse */
-    @keyframes clinch-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.35); }
-      50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
-    }
-    .series-card.just-clinched {
-      border-color: var(--green);
-      animation: clinch-pulse 2s ease-in-out infinite;
-    }
-    .just-clinched-badge {
-      display: inline-block;
-      background: var(--green);
-      color: #052e16;
-      font-size: 0.58rem;
-      font-weight: 800;
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-left: 6px;
-    }
-
     /* Series storyline badges */
-    .series-card { position: relative; }
     .b-matchup   { position: relative; }
     .storyline-badge {
       display: inline-block;
@@ -1308,6 +1127,55 @@
         gap: 4px;
       }
       .bcn-finals { display: none; }
+    }
+
+    /* ── Mobile pass — consolidated tightening ───────────────────────── */
+    @media (max-width: 560px) {
+      .header { padding: 24px 0 18px; margin-bottom: 16px; }
+      .header h1 { margin-bottom: 8px; }
+
+      /* Scoreboard counts shrink so they don't dominate the viewport */
+      .scoreboard { padding: 16px 14px; gap: 10px; margin-bottom: 28px; }
+      .score-player .player-count { font-size: 2.6rem; }
+      .score-player .player-name  { font-size: 0.82rem; letter-spacing: 0.06em; }
+      .score-player .player-label { font-size: 0.66rem; }
+
+      /* Round progress: let the bar wrap to its own row when cramped */
+      .round-progress { flex-wrap: wrap; gap: 8px 10px; padding: 10px 12px; font-size: 0.72rem; }
+      .rp-bar { min-width: 100%; order: 99; }
+
+      /* HoF tightening (paired with the existing table breakpoint) */
+      .hall-of-fame { padding: 10px 12px; }
+
+      /* Desk cards have less side-padding on phones */
+      .desk-card { padding: 12px 14px; gap: 10px; }
+      .desk-quote { font-size: 0.78rem; }
+      .desk-grid { gap: 10px; margin-bottom: 24px; }
+
+      /* Settlement Center tightens to fit narrow screens */
+      .settlement { padding: 16px 14px; margin-bottom: 28px; }
+      .settlement-meta { font-size: 0.74rem; gap: 4px 14px; }
+      .settlement-offer { padding: 12px 12px; }
+      .settlement-plan { font-size: 0.78rem; padding: 7px 8px; gap: 8px; }
+      .settlement-plan-label { line-height: 1.35; }
+      .settlement-cta { gap: 10px; }
+      .settlement-disclaimer { font-size: 0.66rem; min-width: 100%; }
+
+      /* Side bet card already has a CLS reservation; trim its inner padding */
+      .side-bet-card { padding: 16px 14px; margin-bottom: 28px; }
+
+      /* Section spacing in general */
+      .section-header { margin-bottom: 12px; }
+    }
+
+    @media (max-width: 400px) {
+      body { padding: 12px; }
+      .header { padding: 18px 0 14px; }
+      .scoreboard { padding: 14px 12px; }
+      .score-player .player-count { font-size: 2.2rem; }
+      .desk-avatar { width: 28px; height: 28px; font-size: 0.72rem; }
+      .desk-quote { font-size: 0.76rem; }
+      .settlement-apply { padding: 7px 14px; font-size: 0.74rem; }
     }
   </style>
   <!-- Cloudflare Web Analytics -->
@@ -2362,127 +2230,7 @@ function renderRaceChart(hist) {
     </div>`;
 }
 
-const ROUND_ORDER = { '1st Round':1, 'Conf. Semis':2, 'Conf. Finals':3, 'NBA Finals':4, 'Playoffs':5 };
-
-function ownerSummary(s) {
-  const ao = getOwner(s.awayAbbr), ho = getOwner(s.homeAbbr);
-  const { awayWins: aw, homeWins: hw } = s;
-  if (s.completed) {
-    if (aw >= 4) return `${ao} wins series ${aw}–${hw}`;
-    if (hw >= 4) return `${ho} wins series ${hw}–${aw}`;
-  }
-  if (aw > hw) return `${ao} leads ${aw}–${hw}`;
-  if (hw > aw) return `${ho} leads ${hw}–${aw}`;
-  if (aw > 0)  return `Series tied ${aw}–${hw}`;
-  return '';
-}
-
-// Tracks which round groups are manually open in Series view
-const openRounds = new Set(['__init__']);
-
-function toggleRound(round) {
-  const key = round.replace(/[\s.]/g, '_');
-  if (openRounds.has(round)) openRounds.delete(round);
-  else openRounds.add(round);
-  const cards   = document.getElementById(`rg-cards-${key}`);
-  const chevron = document.getElementById(`rg-chev-${key}`);
-  if (cards)   cards.classList.toggle('collapsed', !openRounds.has(round));
-  if (chevron) chevron.classList.toggle('open', openRounds.has(round));
-}
-
 let cachedClinched = new Set();
-// Series storyline badge — picks the most exciting state and labels it.
-// Only shown for live (incomplete) series.
-function storylineBadge(s) {
-  if (s.completed) return '';
-  const lead  = Math.max(s.awayWins, s.homeWins);
-  const trail = Math.min(s.awayWins, s.homeWins);
-  if (lead === 3 && trail === 3) return '<div class="storyline-badge game7">🎲 Game 7</div>';
-  if (lead === 3 && trail === 0) return '<div class="storyline-badge sweep">🧹 Sweep Watch</div>';
-  if (lead === 3)                return '<div class="storyline-badge closeout">🔪 Closeout</div>';
-  if (lead === 2 && trail === 2) return '<div class="storyline-badge pivot">🎢 2-2 Pivot</div>';
-  return '';
-}
-
-function seriesCardHTML(s, elim) {
-  const aoOwner = getOwner(s.awayAbbr);
-  const hoOwner = getOwner(s.homeAbbr);
-  const hasScore = s.awayWins > 0 || s.homeWins > 0;
-  const awayWon = s.completed && s.awayWins >= 4;
-  const homeWon = s.completed && s.homeWins >= 4;
-  const totalGames = s.awayWins + s.homeWins;
-  const justClinched = s.completed && cachedClinched.has(s.key);
-  const badge = storylineBadge(s);
-  return `
-    <div class="series-card ${s.completed ? 'series-over' : ''} ${justClinched ? 'just-clinched' : ''}">
-      ${badge}
-      <div class="series-body">
-        <div class="series-team-block">
-          <div class="series-team-abbr ${elim.has(s.awayAbbr) ? 'elim' : ''}">${s.awayAbbr}</div>
-          <div class="series-team-owner ${ownerCls(aoOwner)}">${aoOwner || '—'}</div>
-          ${awayWon ? `<div class="series-win-badge">✓ Won in ${totalGames}</div>` : ''}
-        </div>
-        <div class="series-score-block">
-          <div class="series-score">${hasScore ? `${s.awayWins}–${s.homeWins}` : '–'}</div>
-        </div>
-        <div class="series-team-block">
-          <div class="series-team-abbr ${elim.has(s.homeAbbr) ? 'elim' : ''}">${s.homeAbbr}</div>
-          <div class="series-team-owner ${ownerCls(hoOwner)}">${hoOwner || '—'}</div>
-          ${homeWon ? `<div class="series-win-badge">✓ Won in ${totalGames}</div>` : ''}
-        </div>
-      </div>
-      ${(ownerSummary(s) || s.summary) ? `<div class="series-summary-text">${ownerSummary(s) || s.summary}${justClinched ? '<span class="just-clinched-badge">Just clinched</span>' : ''}</div>` : ''}
-    </div>`;
-}
-
-function renderMatchups(seriesMap, elim) {
-  const el = document.getElementById('matchups-container');
-  if (!seriesMap.size) {
-    el.innerHTML = '<div class="loading-msg">No playoff series found yet — check back once the playoffs begin.</div>';
-    return;
-  }
-
-  // Group series by round in order
-  const roundOrder = ['1st Round','Conf. Semis','Conf. Finals','NBA Finals','Playoffs'];
-  const groups = {};
-  for (const s of seriesMap.values()) {
-    if (!groups[s.round]) groups[s.round] = [];
-    groups[s.round].push(s);
-  }
-
-  // Current active round = first round with any incomplete series
-  const activeRound = roundOrder.find(r => groups[r]?.some(s => !s.completed)) || roundOrder[0];
-
-  // On first load, default open state: only the active round
-  if (openRounds.has('__init__')) {
-    openRounds.clear();
-    openRounds.add(activeRound);
-  }
-
-  el.innerHTML = roundOrder.filter(r => groups[r]).map(round => {
-    const series   = groups[round].sort((a,b) => a.completed - b.completed);
-    const done     = series.filter(s => s.completed).length;
-    const total    = series.length;
-    const allDone  = done === total;
-    const isOpen   = openRounds.has(round);
-    const key      = round.replace(/[\s.]/g, '_');
-    const status   = allDone ? `${total}/${total} complete ✓` : `${done}/${total} complete`;
-
-    return `
-      <div class="round-group">
-        <div class="round-group-header" onclick="toggleRound('${round}')">
-          <span class="round-group-title">${round}</span>
-          <span class="round-group-status">${status}</span>
-          <span class="round-group-chevron ${isOpen ? 'open' : ''}" id="rg-chev-${key}">▾</span>
-        </div>
-        <div class="round-group-cards ${isOpen ? '' : 'collapsed'}" id="rg-cards-${key}">
-          <div class="matchups-grid">
-            ${series.map(s => seriesCardHTML(s, elim)).join('')}
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-}
 
 // Draft order — 1-indexed snake draft
 const DRAFT_ORDER = [
