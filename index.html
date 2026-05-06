@@ -802,10 +802,13 @@
       border-radius: 16px;
       padding: 20px 24px;
       margin-bottom: 36px;
-      min-height: 360px;   /* reserve space to prevent CLS when odds load */
     }
+    /* Reserve space only while the card is in its loading placeholder
+       state — prevents CLS during initial fetch. Once data renders,
+       the card sizes to content (shorter as teams are eliminated). */
+    .side-bet-card.loading { min-height: 360px; }
     @media (max-width: 560px) {
-      .side-bet-card { min-height: 460px; }  /* team rows stack taller on mobile */
+      .side-bet-card.loading { min-height: 460px; }
     }
 
     .sb-players {
@@ -1236,7 +1239,7 @@
     <div class="section-line"></div>
   </div>
   <div id="side-bet-container">
-    <div class="side-bet-card"><div class="sb-unavail">Loading odds…</div></div>
+    <div class="side-bet-card loading"><div class="sb-unavail">Loading odds…</div></div>
   </div>
 
   <div class="section-header">
@@ -2764,7 +2767,7 @@ function calcSideBet(oddsMap, elim, inPlayoffs) {
 function renderSideBet(result, cached = false, cachedTs = null) {
   const el = document.getElementById('side-bet-container');
   if (!result) {
-    el.innerHTML = `<div class="side-bet-card">
+    el.innerHTML = `<div class="side-bet-card loading">
       <div class="sb-unavail">Championship odds unavailable — updated nightly via ESPN.</div>
     </div>`;
     return;
