@@ -242,7 +242,7 @@
     .hof-stats strong { color: var(--text); }
     .hof-paid-note { color: var(--text-dim); font-size: 0.72rem; margin-left: 4px; }
 
-    /* ── Settlement Center (Western Union sponsor bit) ──────────────── */
+    /* ── Settlement Center (TransUnion sponsor bit) ──────────────── */
     .settlement {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -254,7 +254,7 @@
     }
     .settlement::before {
       content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,221,0,0.04), transparent 40%);
+      background: linear-gradient(135deg, rgba(0,153,216,0.06), transparent 40%);
       pointer-events: none;
     }
     .settlement-head {
@@ -276,7 +276,7 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #e8c200;
+      color: #0099d8;
     }
     .settlement-meta {
       display: grid;
@@ -289,8 +289,8 @@
     .settlement-meta strong { color: var(--text); font-weight: 700; }
     .settlement-meta .delinquent { color: #ef4444; font-weight: 700; }
     .settlement-offer {
-      background: rgba(255,221,0,0.05);
-      border: 1px solid rgba(255,221,0,0.25);
+      background: rgba(0,153,216,0.05);
+      border: 1px solid rgba(0,153,216,0.3);
       border-radius: 10px;
       padding: 14px 16px;
     }
@@ -299,7 +299,7 @@
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #ffdd00;
+      color: #0099d8;
       margin-bottom: 12px;
     }
     .settlement-plans {
@@ -322,8 +322,8 @@
     }
     .settlement-plan:hover { background: rgba(255,255,255,0.03); }
     .settlement-plan.selected {
-      background: rgba(255,221,0,0.08);
-      border-color: rgba(255,221,0,0.35);
+      background: rgba(0,153,216,0.1);
+      border-color: rgba(0,153,216,0.4);
     }
     .settlement-radio {
       width: 14px; height: 14px;
@@ -333,12 +333,12 @@
       position: relative;
     }
     .settlement-plan.selected .settlement-radio {
-      border-color: #ffdd00;
+      border-color: #0099d8;
     }
     .settlement-plan.selected .settlement-radio::after {
       content: ''; position: absolute;
       inset: 2px; border-radius: 50%;
-      background: #ffdd00;
+      background: #0099d8;
     }
     .settlement-plan-label { flex: 1; }
     .settlement-plan-rec {
@@ -346,8 +346,8 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: #ffdd00;
-      background: rgba(255,221,0,0.12);
+      color: #0099d8;
+      background: rgba(0,153,216,0.15);
       padding: 2px 6px;
       border-radius: 4px;
     }
@@ -358,8 +358,8 @@
       flex-wrap: wrap;
     }
     .settlement-apply {
-      background: #ffdd00;
-      color: #1a1300;
+      background: #0099d8;
+      color: #ffffff;
       border: none;
       padding: 8px 16px;
       border-radius: 999px;
@@ -369,7 +369,7 @@
       cursor: pointer;
       transition: transform 0.1s, background 0.15s;
     }
-    .settlement-apply:hover { background: #ffe833; transform: translateY(-1px); }
+    .settlement-apply:hover { background: #29b8eb; transform: translateY(-1px); }
     .settlement-apply:active { transform: translateY(0); }
     .settlement-disclaimer {
       font-size: 0.7rem;
@@ -383,8 +383,8 @@
       bottom: 24px;
       left: 50%;
       transform: translateX(-50%);
-      background: #ffdd00;
-      color: #1a1300;
+      background: #0099d8;
+      color: #ffffff;
       padding: 12px 20px;
       border-radius: 999px;
       font-weight: 700;
@@ -3250,16 +3250,17 @@ function toggleHallOfFame() {
   renderHallOfFame();
 }
 
-// ── Settlement Center (Western Union sponsor bit) ───────────────────────
+// ── Settlement Center (TransUnion sponsor bit) ───────────────────────
 const SETTLEMENT_DISCLAIMERS = [
-  "Subject to approval. Derek may not qualify.",
-  "Past borrower behavior suggests slow repayment is likely.",
-  "This is a hypothetical product. So, sadly, is the repayment.",
-  "Western Union has not approved this offer. Neither has Derek.",
-  "Rates may vary. Derek's commitment level definitely will.",
+  "Subject to credit review. Derek's score is already in our system.",
+  "TransUnion has flagged this account as 'historically optimistic.'",
+  "Derek's credit profile reflects 1,795 days of dinner-related delinquency.",
+  "Past payment behavior is the best predictor of future behavior. We've checked.",
+  "Application reviewed by TransUnion. Derek's file is unusually thick.",
   "Approval requires proof of income and one (1) actual dinner reservation.",
-  "Co-signers required. Kevin has refused.",
-  "Promotional rate ends when Derek decides to settle. Promotional rate is permanent.",
+  "Co-signers required. Kevin has declined.",
+  "Promotional rate ends when Derek pays. Promotional rate is therefore permanent.",
+  "TransUnion has rated this debt 'unlikely to be resolved by natural causes.'",
 ];
 const PLAYOFF_START_DATE = new Date('2021-11-15'); // when the tab last got paid (2020 dinner)
 const SETTLEMENT_KEY = 'nba26-settlement-plan';
@@ -3308,7 +3309,7 @@ function renderSettlementCenter() {
     <div class="settlement">
       <div class="settlement-head">
         <span class="settlement-title">💰 Settlement Center</span>
-        <span class="settlement-sponsor">Powered by Western Union</span>
+        <span class="settlement-sponsor">Powered by TransUnion</span>
       </div>
       <div class="settlement-meta">
         <div>Borrower: <strong>Derek</strong></div>
@@ -3339,11 +3340,12 @@ function renderSettlementCenter() {
 
 function applySettlement() {
   const messages = [
-    "Application received. Derek's credit has already declined.",
+    "Application received. TransUnion just lowered Derek's score by 40 points.",
     "Submitted. Please allow 5-7 business years for review.",
     "Application pending. Like the dinner, indefinitely.",
-    "Thanks! A representative will call Derek. He won't pick up.",
+    "Thanks! TransUnion will notify Derek. He won't open the email.",
     "Approved in principle. Denied in practice.",
+    "Reported to all three bureaus. Mostly out of habit.",
   ];
   const msg = messages[Math.floor(Math.random() * messages.length)];
   // Remove any existing toast first so rapid clicks don't stack
