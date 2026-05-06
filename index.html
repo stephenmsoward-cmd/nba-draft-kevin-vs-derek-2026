@@ -3254,7 +3254,7 @@ function toggleHallOfFame() {
 const SETTLEMENT_DISCLAIMERS = [
   "Subject to credit review. Derek's score is already in our system.",
   "TransUnion has flagged this account as 'historically optimistic.'",
-  "Derek's credit profile reflects 1,795 days of dinner-related delinquency.",
+  "Derek's credit profile reflects {{days}} days of dinner-related delinquency.",
   "Past payment behavior is the best predictor of future behavior. We've checked.",
   "Application reviewed by TransUnion. Derek's file is unusually thick.",
   "Approval requires proof of income and one (1) actual dinner reservation.",
@@ -3295,7 +3295,7 @@ function renderSettlementCenter() {
   const today = new Date().toLocaleDateString('en-CA');
   const disclaimer = SETTLEMENT_DISCLAIMERS[
     Math.abs(hashStr(today + 'settlement')) % SETTLEMENT_DISCLAIMERS.length
-  ];
+  ].replace('{{days}}', daysDelinquent.toLocaleString());
 
   const planRows = plans.map(p => `
     <div class="settlement-plan ${p.id === selectedId ? 'selected' : ''}" data-plan="${p.id}">
