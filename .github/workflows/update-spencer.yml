@@ -224,6 +224,26 @@ jobs:
                       f"{c['trailing']} 0-1 at home. They simplify the offense, lock down the perimeter, win by double digits.",
                       f"Game 2 at {c['trailing']}. Coaches always win Game 2 of a 0-1 home series — {c['trailing']} cashes the historical pattern.",
                   ],
+                  # held1: home team won Game 1, Game 2 also at home. Leader
+                  # is protecting serve, not stealing. Variants reflect that —
+                  # no "answer back at home" lines for the trailing team since
+                  # they're still on the road.
+                  'held1': [
+                      f"{c['leader']} held serve in Game 1. Game 2 is more of the same — {c['leader']} takes care of business at home.",
+                      f"{c['leader']} up 1-0 at home. Sweep talk is premature, but {c['leader']} leaves with a 2-0 lead tonight.",
+                      f"{c['trailing']} couldn't steal the opener. They're staring down 0-2 before heading home — {c['leader']} pushes them there.",
+                      f"Game 2 at {c['leader']}, series 1-0. Same building, same matchup — {c['leader']} repeats and goes up 2-0.",
+                      f"{c['leader']} protected home court in Game 1. Tonight they protect it again — {c['leader']} by 8.",
+                      f"Up 1-0 at home, {c['leader']} doesn't waste it. Game 2 is a closer game with the same outcome.",
+                      f"{c['trailing']} on the road, down 0-1. Bench has to step up to flip Game 2 — they don't, and {c['leader']} takes a 2-0 lead.",
+                      f"{c['leader']} 1-0, hosting Game 2. Stars get their rest in the fourth — {c['leader']} by double digits.",
+                      f"Game 2 at {c['leader']}. Holding serve at home is the entire script — {c['leader']} executes it again.",
+                      f"{c['trailing']} drops Game 1 on the road, drops Game 2 on the road. {c['leader']} leaves home up 2-0.",
+                      f"{c['leader']} won Game 1 comfortably at home. Game 2 follows the same pattern — crowd loud, lead big, {c['leader']} W.",
+                      f"{c['trailing']} threw their best punch in Game 1 and lost. Game 2 is uglier — {c['leader']} by 12.",
+                      f"Series 1-0, Game 2 at {c['leader']}. Home team wins this spot 80%+ historically. {c['leader']} hits the average.",
+                      f"{c['leader']} hosting back-to-back. They cash both — {c['trailing']} heads home down 0-2.",
+                  ],
                   'fallback': [
                       f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['leaderLabel']} — {c['pick']} takes this one by double digits.",
                       f"{c['aA']} at {c['hA']}, Game {c['game']}. {c['pick']} controls the tempo and wins going away.",
@@ -242,14 +262,16 @@ jobs:
                   ],
               }
 
-          def pick_template_id(aW, hW, leadW, trailW, game):
+          def pick_template_id(aW, hW, leadW, trailW, game, leader, aA):
               if aW == 0 and hW == 0: return 'game1'
               if leadW == 3: return 'elim'
               if leadW == 2 and trailW == 2: return 'pivot22'
               if leadW == 1 and trailW == 1: return 'tied11'
               if leadW == 2 and trailW == 1: return 'lead21'
               if leadW == 2 and trailW == 0: return 'lead20'
-              if leadW == 1 and trailW == 0 and game == 2: return 'stole1'
+              if leadW == 1 and trailW == 0 and game == 2:
+                  # Differentiate road steal vs home hold for Game 2 setup
+                  return 'stole1' if leader == aA else 'held1'
               return 'fallback'
 
           def is_clean(t):
@@ -276,7 +298,7 @@ jobs:
               trailing = (hA if leader == aA else aA) if leader else None
               pick = leader or hA
               leader_label = f"{leader} leads {leadW}-{trailW}" if leader else 'Series tied'
-              tid = pick_template_id(aW, hW, leadW, trailW, game)
+              tid = pick_template_id(aW, hW, leadW, trailW, game, leader, aA)
               ctx = {'aA': aA, 'hA': hA, 'leader': leader, 'trailing': trailing,
                      'leadW': leadW, 'trailW': trailW, 'game': game, 'pick': pick,
                      'leaderLabel': leader_label}
