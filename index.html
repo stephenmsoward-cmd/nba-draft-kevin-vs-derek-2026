@@ -242,6 +242,166 @@
     .hof-stats strong { color: var(--text); }
     .hof-paid-note { color: var(--text-dim); font-size: 0.72rem; margin-left: 4px; }
 
+    /* ── Settlement Center (Western Union sponsor bit) ──────────────── */
+    .settlement {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .settlement::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,221,0,0.04), transparent 40%);
+      pointer-events: none;
+    }
+    .settlement-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .settlement-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+    .settlement-sponsor {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e8c200;
+    }
+    .settlement-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 6px 18px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+    .settlement-meta strong { color: var(--text); font-weight: 700; }
+    .settlement-meta .delinquent { color: #ef4444; font-weight: 700; }
+    .settlement-offer {
+      background: rgba(255,221,0,0.05);
+      border: 1px solid rgba(255,221,0,0.25);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .settlement-offer-head {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffdd00;
+      margin-bottom: 12px;
+    }
+    .settlement-plans {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .settlement-plan {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--text);
+      border: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .settlement-plan:hover { background: rgba(255,255,255,0.03); }
+    .settlement-plan.selected {
+      background: rgba(255,221,0,0.08);
+      border-color: rgba(255,221,0,0.35);
+    }
+    .settlement-radio {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--text-dim);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .settlement-plan.selected .settlement-radio {
+      border-color: #ffdd00;
+    }
+    .settlement-plan.selected .settlement-radio::after {
+      content: ''; position: absolute;
+      inset: 2px; border-radius: 50%;
+      background: #ffdd00;
+    }
+    .settlement-plan-label { flex: 1; }
+    .settlement-plan-rec {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #ffdd00;
+      background: rgba(255,221,0,0.12);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .settlement-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .settlement-apply {
+      background: #ffdd00;
+      color: #1a1300;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .settlement-apply:hover { background: #ffe833; transform: translateY(-1px); }
+    .settlement-apply:active { transform: translateY(0); }
+    .settlement-disclaimer {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-style: italic;
+      flex: 1;
+      min-width: 200px;
+    }
+    .settlement-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffdd00;
+      color: #1a1300;
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+      z-index: 10000;
+      pointer-events: none;
+      animation: settlement-toast-in 0.25s ease-out, settlement-toast-out 0.25s ease-in 2.4s forwards;
+    }
+    @keyframes settlement-toast-in {
+      from { opacity: 0; transform: translate(-50%, 12px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
+    @keyframes settlement-toast-out {
+      to { opacity: 0; transform: translate(-50%, 8px); }
+    }
+
     .score-player .player-label {
       font-size: 0.72rem;
       color: var(--muted);
@@ -1184,6 +1344,8 @@
   </div>
 
   <div id="hall-of-fame" class="hall-of-fame"></div>
+
+  <div id="settlement-center"></div>
 
   <div class="section-header">
     <span class="section-title">Side Bet — Stephen vs. Nathaniel</span>
@@ -3088,7 +3250,113 @@ function toggleHallOfFame() {
   renderHallOfFame();
 }
 
+// ── Settlement Center (Western Union sponsor bit) ───────────────────────
+const SETTLEMENT_DISCLAIMERS = [
+  "Subject to approval. Derek may not qualify.",
+  "Past borrower behavior suggests slow repayment is likely.",
+  "This is a hypothetical product. So, sadly, is the repayment.",
+  "Western Union has not approved this offer. Neither has Derek.",
+  "Rates may vary. Derek's commitment level definitely will.",
+  "Approval requires proof of income and one (1) actual dinner reservation.",
+  "Co-signers required. Kevin has refused.",
+  "Promotional rate ends when Derek decides to settle. Promotional rate is permanent.",
+];
+const PLAYOFF_START_DATE = new Date('2021-11-15'); // when the tab last got paid (2020 dinner)
+const SETTLEMENT_KEY = 'nba26-settlement-plan';
+
+function settlementMonthly(principal, annualRate, months) {
+  if (annualRate === 0) return principal / months;
+  const r = annualRate / 12;
+  return principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
+}
+
+function fmtMoney(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderSettlementCenter() {
+  const el = document.getElementById('settlement-center');
+  if (!el) return;
+  // Source the outstanding balance from the same data the HoF uses
+  const outstanding = HOF_HISTORY.filter(h => !h.paid).reduce((s, h) => s + h.value, 0);
+  if (outstanding <= 0) { el.innerHTML = ''; return; }
+
+  // Days since last paid dinner (2020 entry settled mid-Nov 2021)
+  const daysDelinquent = Math.floor((Date.now() - PLAYOFF_START_DATE.getTime()) / (1000 * 60 * 60 * 24));
+
+  const plans = [
+    { id: 'pay4',  label: 'Pay in 4',   detail: `4 × ${fmtMoney(outstanding / 4)}, 0% APR`, recommended: true,  monthly: outstanding / 4, term: 4, apr: 0 },
+    { id: '12mo',  label: '12 months',  detail: `${fmtMoney(settlementMonthly(outstanding, 0.0999, 12))}/mo at 9.99% APR`,  monthly: settlementMonthly(outstanding, 0.0999, 12),  term: 12, apr: 0.0999 },
+    { id: '24mo',  label: '24 months',  detail: `${fmtMoney(settlementMonthly(outstanding, 0.1299, 24))}/mo at 12.99% APR`, monthly: settlementMonthly(outstanding, 0.1299, 24),  term: 24, apr: 0.1299 },
+  ];
+
+  const selectedId = localStorage.getItem(SETTLEMENT_KEY) || 'pay4';
+  const today = new Date().toLocaleDateString('en-CA');
+  const disclaimer = SETTLEMENT_DISCLAIMERS[
+    Math.abs(hashStr(today + 'settlement')) % SETTLEMENT_DISCLAIMERS.length
+  ];
+
+  const planRows = plans.map(p => `
+    <div class="settlement-plan ${p.id === selectedId ? 'selected' : ''}" data-plan="${p.id}">
+      <span class="settlement-radio"></span>
+      <span class="settlement-plan-label"><strong>${p.label}</strong> &nbsp;→&nbsp; ${p.detail}</span>
+      ${p.recommended ? `<span class="settlement-plan-rec">Recommended</span>` : ''}
+    </div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="settlement">
+      <div class="settlement-head">
+        <span class="settlement-title">💰 Settlement Center</span>
+        <span class="settlement-sponsor">Powered by Western Union</span>
+      </div>
+      <div class="settlement-meta">
+        <div>Borrower: <strong>Derek</strong></div>
+        <div>Lender: <strong>Kevin</strong></div>
+        <div>Outstanding: <strong>${fmtMoney(outstanding)}</strong></div>
+        <div>Days delinquent: <span class="delinquent">${daysDelinquent.toLocaleString()}</span></div>
+      </div>
+      <div class="settlement-offer">
+        <div class="settlement-offer-head">💸 Finance your settlement</div>
+        <div class="settlement-plans" id="settlement-plans">${planRows}</div>
+        <div class="settlement-cta">
+          <button class="settlement-apply" onclick="applySettlement()">Apply Now →</button>
+          <span class="settlement-disclaimer">${disclaimer}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up radio selection
+  el.querySelectorAll('.settlement-plan').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = row.dataset.plan;
+      try { localStorage.setItem(SETTLEMENT_KEY, id); } catch {}
+      el.querySelectorAll('.settlement-plan').forEach(r => r.classList.toggle('selected', r === row));
+    });
+  });
+}
+
+function applySettlement() {
+  const messages = [
+    "Application received. Derek's credit has already declined.",
+    "Submitted. Please allow 5-7 business years for review.",
+    "Application pending. Like the dinner, indefinitely.",
+    "Thanks! A representative will call Derek. He won't pick up.",
+    "Approved in principle. Denied in practice.",
+  ];
+  const msg = messages[Math.floor(Math.random() * messages.length)];
+  // Remove any existing toast first so rapid clicks don't stack
+  document.querySelectorAll('.settlement-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'settlement-toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2700);
+}
+
 renderHallOfFame();
+renderSettlementCenter();
 loadData();
 </script>
 </body>
