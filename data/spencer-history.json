@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-09T16:36:54.369694+00:00",
+  "updatedAt": "2026-05-10T16:38:09.836388+00:00",
   "entries": [
+    {
+      "date": "2026-05-10",
+      "templateId": "elim",
+      "variantIdx": 4,
+      "text": "PHI is one loss from a long summer. NYK smells it and finishes by 12.",
+      "pick": "NYK",
+      "aA": "NYK",
+      "hA": "PHI",
+      "result": null
+    },
     {
       "date": "2026-05-09",
       "templateId": "lead20",
@@ -9,7 +19,7 @@
       "pick": "DET",
       "aA": "DET",
       "hA": "CLE",
-      "result": null
+      "result": "loss"
     },
     {
       "date": "2026-05-08",
