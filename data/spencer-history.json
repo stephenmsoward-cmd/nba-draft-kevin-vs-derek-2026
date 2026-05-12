@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-11T20:23:40.058231+00:00",
+  "updatedAt": "2026-05-12T20:18:40.899517+00:00",
   "entries": [
+    {
+      "date": "2026-05-12",
+      "templateId": "pivot22",
+      "variantIdx": 3,
+      "text": "Game 5 of a 2-2 series at SAS. Whoever wins this one wins the series 82% of the time \u2014 and SAS grabs the wheel.",
+      "pick": "SAS",
+      "aA": "MIN",
+      "hA": "SAS",
+      "result": null
+    },
     {
       "date": "2026-05-11",
       "templateId": "elim",
@@ -9,7 +19,7 @@
       "pick": "OKC",
       "aA": "OKC",
       "hA": "LAL",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-05-10",
