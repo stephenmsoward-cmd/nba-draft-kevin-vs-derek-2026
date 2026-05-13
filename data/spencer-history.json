@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-12T20:18:40.899517+00:00",
+  "updatedAt": "2026-05-13T20:22:43.532745+00:00",
   "entries": [
+    {
+      "date": "2026-05-13",
+      "templateId": "pivot22",
+      "variantIdx": 10,
+      "text": "Pivot game in DET. The role players have figured out the matchups by now \u2014 DET's bench tilts this one.",
+      "pick": "DET",
+      "aA": "CLE",
+      "hA": "DET",
+      "result": null
+    },
     {
       "date": "2026-05-12",
       "templateId": "pivot22",
@@ -9,7 +19,7 @@
       "pick": "SAS",
       "aA": "MIN",
       "hA": "SAS",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-05-11",
