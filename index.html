@@ -1492,6 +1492,7 @@ function calcMaxFinalFour(playerName, sm) {
 }
 
 let cachedOddsMap = null;
+let cachedOddsMeta = { source: '', updatedAt: '' };
 
 function renderScoreboard(elim, inPlayoffs, sm) {
   for (const name of ['Kevin','Derek']) {
@@ -2748,7 +2749,13 @@ async function fetchChampionshipOdds() {
       if (abbr) probs[abbr] = p;
     }
     console.log('[Odds] Loaded from odds.json (updated', data.updatedAt, '):', Object.keys(probs));
-    return Object.keys(probs).length >= 4 ? probs : null;
+    // Threshold loosened so the side bet keeps working in Conf Finals (4) and
+    // NBA Finals (2). Original 4-team minimum cut the bet card off too early.
+    if (Object.keys(probs).length < 2) return null;
+    // Stash provenance for side-bet attribution without polluting the
+    // probs map (which gets iterated downstream).
+    cachedOddsMeta = { source: data.source || '', updatedAt: data.updatedAt || '' };
+    return probs;
   } catch(e) {
     console.warn('[Odds] Failed to load odds.json:', e);
     return null;
@@ -2798,9 +2805,18 @@ function renderSideBet(result, cached = false, cachedTs = null) {
   }
 
   const { kPct, dPct, kevinTeams, derekTeams } = result;
+  // Build an attribution suffix from whatever provider the workflow tagged.
+  // Examples: 'espn-api / draftkings' → 'DraftKings'; 'espn-futures-page' → 'ESPN'.
+  const src = (cachedOddsMeta?.source || '').toLowerCase();
+  let provider = '';
+  if      (src.includes('draftkings')) provider = 'DraftKings';
+  else if (src.includes('espn bet'))   provider = 'ESPN BET';
+  else if (src.includes('espn'))       provider = 'ESPN';
+  const sourceTag = provider ? ` · via ${provider}` : '';
+
   const tsLabel = cached && cachedTs
-    ? `Odds as of ${new Date(cachedTs).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`
-    : 'Based on current championship odds';
+    ? `Odds as of ${new Date(cachedTs).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}${sourceTag}`
+    : `Based on current championship odds${sourceTag}`;
   const maxRows = Math.max(kevinTeams.length, derekTeams.length);
 
   // Build row pairs (Kevin left, Derek right)
