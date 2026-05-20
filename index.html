@@ -1136,7 +1136,10 @@
        Tell the browser to skip layout/paint for these sections until they
        scroll near the viewport. contain-intrinsic-size reserves space so
        there's no jump as content materializes. */
-    #side-bet-container,
+    /* Note: #side-bet-container is intentionally NOT in this list — it
+       hosts a tooltip that needs to overflow the container, and
+       content-visibility implies `contain: paint` which would clip it.
+       Card is also usually above the fold so the optimization is small. */
     #bracket-container,
     #teams-container,
     #settlement-center,
@@ -2854,7 +2857,7 @@ function renderSideBet(result, cached = false, cachedTs = null) {
         ${tsLabel}
         <span class="ff-tooltip">
           <span class="ff-ques">?</span>
-          <span class="ff-tooltip-text" style="width:280px;left:auto;right:0;transform:none;">
+          <span class="ff-tooltip-text" style="width:min(280px, calc(100vw - 32px));left:auto;right:0;transform:none;">
             Odds are averaged across all available sportsbooks to reduce house margin. We then normalize non-eliminated teams so their probabilities sum to 100%. Kevin's teams' share = Stephen's win probability; Derek's teams' share = Nathaniel's. Odds only refresh automatically when a game ends — not on every page load.
           </span>
         </span>
