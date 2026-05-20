@@ -21,192 +21,129 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 lxml
+        run: pip install requests
 
-      - name: Fetch odds from ESPN futures page
+      - name: Fetch odds from ESPN futures API
         run: |
           python3 << 'PYEOF'
           import requests, json, re, time
-          from bs4 import BeautifulSoup
           from datetime import datetime, timezone
 
-          # Realistic browser fingerprint — minimum needed to get past
-          # CDN anti-bot interstitials that ESPN started serving.
           HEADERS = {
               'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+              'Accept': 'application/json',
               'Accept-Language': 'en-US,en;q=0.9',
-              'Accept-Encoding': 'gzip, deflate, br',
-              'Connection': 'keep-alive',
-              'Upgrade-Insecure-Requests': '1',
-              'Sec-Fetch-Dest': 'document',
-              'Sec-Fetch-Mode': 'navigate',
-              'Sec-Fetch-Site': 'none',
-              'Sec-Fetch-User': '?1',
-              'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
-              'Sec-Ch-Ua-Mobile': '?0',
-              'Sec-Ch-Ua-Platform': '"macOS"',
-              'Cache-Control': 'max-age=0',
           }
 
-          def fetch_with_retry(session_or_module, url, max_attempts=4, base_delay=2):
-              """GET that retries on 202 (anti-bot interstitial)."""
-              last = None
-              for attempt in range(max_attempts):
-                  last = session_or_module.get(url, headers=HEADERS, timeout=20)
-                  if last.status_code == 200:
-                      return last
-                  if last.status_code == 202:
-                      wait = base_delay * (2 ** attempt)  # 2s, 4s, 8s, 16s
-                      print(f'  [retry] {url} → 202, waiting {wait}s (attempt {attempt+1}/{max_attempts})')
-                      time.sleep(wait)
-                      continue
-                  return last  # other status — don't burn budget retrying
-              return last
+          # ESPN stable NBA team IDs → (abbr, full name). Used to resolve the
+          # team $refs in the futures payload without an extra HTTP per team.
+          ESPN_TEAMS = {
+              1:  ('ATL', 'Atlanta Hawks'),
+              2:  ('BOS', 'Boston Celtics'),
+              3:  ('NOP', 'New Orleans Pelicans'),
+              4:  ('CHI', 'Chicago Bulls'),
+              5:  ('CLE', 'Cleveland Cavaliers'),
+              6:  ('DAL', 'Dallas Mavericks'),
+              7:  ('DEN', 'Denver Nuggets'),
+              8:  ('DET', 'Detroit Pistons'),
+              9:  ('GSW', 'Golden State Warriors'),
+              10: ('HOU', 'Houston Rockets'),
+              11: ('IND', 'Indiana Pacers'),
+              12: ('LAC', 'LA Clippers'),
+              13: ('LAL', 'Los Angeles Lakers'),
+              14: ('MIA', 'Miami Heat'),
+              15: ('MIL', 'Milwaukee Bucks'),
+              16: ('MIN', 'Minnesota Timberwolves'),
+              17: ('BKN', 'Brooklyn Nets'),
+              18: ('NYK', 'New York Knicks'),
+              19: ('ORL', 'Orlando Magic'),
+              20: ('PHI', 'Philadelphia 76ers'),
+              21: ('PHX', 'Phoenix Suns'),
+              22: ('POR', 'Portland Trail Blazers'),
+              23: ('SAC', 'Sacramento Kings'),
+              24: ('SAS', 'San Antonio Spurs'),
+              25: ('OKC', 'Oklahoma City Thunder'),
+              26: ('UTA', 'Utah Jazz'),
+              27: ('WAS', 'Washington Wizards'),
+              28: ('TOR', 'Toronto Raptors'),
+              29: ('MEM', 'Memphis Grizzlies'),
+              30: ('CHA', 'Charlotte Hornets'),
+          }
 
           def american_to_prob(line):
               line = str(line).strip().replace('+', '').replace(',', '')
-              try:
-                  n = int(line)
-              except ValueError:
-                  return 0
-              if n > 0:
-                  return 100 / (n + 100)
-              else:
-                  return abs(n) / (abs(n) + 100)
+              try: n = int(line)
+              except ValueError: return 0
+              return (100 / (n + 100)) if n > 0 else (abs(n) / (abs(n) + 100))
 
-          # Known NBA team keywords — used to filter out junk rows (spreads, totals, etc.)
-          NBA_TEAM_KEYWORDS = [
-              'thunder','pistons','celtics','rockets','timberwolves','raptors',
-              'magic','suns','clippers','heat','spurs','nuggets','knicks',
-              'cavaliers','hawks','lakers','hornets','76ers','sixers',
-              'trail blazers','blazers','warriors','pacers','bulls','nets',
-              'kings','grizzlies','pelicans','mavericks','jazz','wizards','bucks',
-          ]
+          def team_id_from_ref(ref):
+              m = re.search(r'/teams/(\d+)', ref or '')
+              return int(m.group(1)) if m else None
 
-          def is_nba_team(text):
-              t = text.lower()
-              return any(kw in t for kw in NBA_TEAM_KEYWORDS)
+          def parse_provider_books(books):
+              """books -> {full_name: prob}"""
+              out = {}
+              for b in (books or []):
+                  team_ref = (b.get('team') or {}).get('$ref', '')
+                  tid = team_id_from_ref(team_ref)
+                  if not tid or tid not in ESPN_TEAMS: continue
+                  abbr, full = ESPN_TEAMS[tid]
+                  p = american_to_prob(b.get('value', ''))
+                  if p > 0: out[full] = out.get(full, 0) + p
+              return out
 
           probs = {}
           source = 'unknown'
 
-          # ── Attempt 1: ESPN futures page ─────────────────────────────
-          print('[ESPN] Fetching www.espn.com/nba/futures ...')
-          try:
-              r = fetch_with_retry(requests, 'https://www.espn.com/nba/futures')
-              print(f'[ESPN] Final status: {r.status_code}')
-              if r.status_code == 200:
-                  soup = BeautifulSoup(r.text, 'lxml')
+          # ── Primary: ESPN core API (returns DK + ESPN BET odds as JSON) ─
+          season = datetime.now(timezone.utc).year
+          # NBA seasons run Oct-Jun; if we're between Jul and Sep, the futures
+          # season hasn't rolled over yet — back up a year just in case.
+          if datetime.now(timezone.utc).month in (7, 8, 9):
+              season -= 1
 
-                  # Strategy 1: look for table rows — ESPN renders a Table component
-                  rows = soup.select('tr')
-                  for row in rows:
-                      cells = row.find_all('td')
-                      if len(cells) >= 2:
-                          team_cell = cells[0].get_text(strip=True)
-                          odds_cell  = cells[-1].get_text(strip=True)
-                          # Only accept rows where team cell matches a known NBA team
-                          if not is_nba_team(team_cell):
-                              continue
-                          # odds look like "+550" or "-110" or "EVEN"
-                          if re.search(r'[+-]?\d{2,5}', odds_cell) or odds_cell.upper() == 'EVEN':
-                              odds_str = '100' if odds_cell.upper() == 'EVEN' else odds_cell
-                              p = american_to_prob(odds_str)
-                              if p > 0 and team_cell:
-                                  probs[team_cell] = probs.get(team_cell, 0) + p
-                                  print(f'  [ESPN row] {team_cell}: {odds_str} → {p:.4f}')
-
-                  # Strategy 2: look for any element with odds pattern next to team names
-                  if len(probs) < 2:
-                      print('[ESPN] Table strategy found < 4 teams, trying text scan...')
-                      probs = {}
-                      text = soup.get_text(separator='\n')
-                      lines = [l.strip() for l in text.splitlines() if l.strip()]
-                      for i, line in enumerate(lines):
-                          # Look for lines that are American odds
-                          if re.fullmatch(r'[+-]\d{2,6}', line) or line.upper() == 'EVEN':
-                              # Team name is likely on a nearby preceding line
-                              for j in range(i-1, max(i-4, -1), -1):
-                                  candidate = lines[j]
-                                  # Team names are reasonable length and don't look like odds/numbers
-                                  # Allow "76ers" style names — just exclude pure-numeric lines
-                                  if candidate and is_nba_team(candidate) and 3 < len(candidate) < 40:
-                                      odds_str = '100' if line.upper() == 'EVEN' else line
-                                      p = american_to_prob(odds_str)
-                                      if p > 0:
-                                          probs[candidate] = probs.get(candidate, 0) + p
-                                          print(f'  [ESPN scan] {candidate}: {line} → {p:.4f}')
-                                      break
-
-                  if len(probs) >= 2:
-                      source = 'espn-futures-page'
-                      print(f'[ESPN] ✓ Got {len(probs)} teams')
-                  else:
-                      print(f'[ESPN] ✗ Only {len(probs)} teams found')
-                      probs = {}
-
-          except Exception as e:
-              print(f'[ESPN] Error: {e}')
-
-          # ── Attempt 2: DraftKings public NBA futures page (HTML) ──────
-          # The API endpoint at sportsbook-nash now returns 403, so we
-          # parse the public HTML page instead.
-          if len(probs) < 2:
-              print('[DK] Fetching sportsbook.draftkings.com/page/nba-futures ...')
+          # The "NBA - Winner" market exists across recent seasons; try the
+          # current playoff season first, then last season as a safety net.
+          probs = {}
+          for try_season in (season, season - 1):
+              url = f'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/{try_season}/futures'
+              print(f'[ESPN] {url}')
               try:
-                  session = requests.Session()
-                  # Warm up — populates cookies needed for the futures page.
-                  session.get('https://sportsbook.draftkings.com/', headers=HEADERS, timeout=15)
-                  time.sleep(1)
-                  r = fetch_with_retry(session, 'https://sportsbook.draftkings.com/page/nba-futures', max_attempts=3)
-                  print(f'  [DK] Final status: {r.status_code}')
-                  if r.status_code == 200:
-                      soup = BeautifulSoup(r.text, 'lxml')
-                      dk_probs = {}
-
-                      # Strategy 1: <tr> table rows — DK renders the
-                      # championship market as a Team / Odds table.
-                      for row in soup.select('tr'):
-                          cells = row.find_all(['td', 'th'])
-                          if len(cells) < 2: continue
-                          team_cell = cells[0].get_text(strip=True)
-                          odds_cell = cells[-1].get_text(strip=True)
-                          if not is_nba_team(team_cell): continue
-                          if re.search(r'[+-]\d{2,5}', odds_cell) or odds_cell.upper() == 'EVEN':
-                              odds_str = '100' if odds_cell.upper() == 'EVEN' else re.search(r'[+-]\d{2,5}', odds_cell).group(0)
-                              p = american_to_prob(odds_str)
-                              if p > 0:
-                                  dk_probs[team_cell] = dk_probs.get(team_cell, 0) + p
-                                  print(f'  [DK row] {team_cell}: {odds_str} → {p:.4f}')
-
-                      # Strategy 2: pair each odds-like string with the
-                      # nearest preceding NBA team name in plain text.
-                      if len(dk_probs) < 2:
-                          print('  [DK] Table strategy thin, trying text scan...')
-                          dk_probs = {}
-                          text = soup.get_text(separator='\n')
-                          lines = [l.strip() for l in text.splitlines() if l.strip()]
-                          for i, line in enumerate(lines):
-                              if re.fullmatch(r'[+-]\d{2,6}', line) or line.upper() == 'EVEN':
-                                  for j in range(i - 1, max(i - 4, -1), -1):
-                                      cand = lines[j]
-                                      if cand and is_nba_team(cand) and 3 < len(cand) < 40:
-                                          odds_str = '100' if line.upper() == 'EVEN' else line
-                                          p = american_to_prob(odds_str)
-                                          if p > 0:
-                                              dk_probs[cand] = dk_probs.get(cand, 0) + p
-                                              print(f'  [DK scan] {cand}: {line} → {p:.4f}')
-                                          break
-
-                      if len(dk_probs) >= 2:
-                          probs = dk_probs
-                          source = 'draftkings-futures-page'
-                          print(f'[DK] ✓ Got {len(dk_probs)} teams')
-                      else:
-                          print(f'[DK] ✗ Only {len(dk_probs)} teams found')
+                  r = requests.get(url, headers=HEADERS, timeout=20)
+                  print(f'  status: {r.status_code}')
+                  if r.status_code != 200: continue
+                  data = r.json()
               except Exception as e:
-                  print(f'[DK] Error: {e}')
+                  print(f'  err: {e}'); continue
+
+              winner = next((it for it in data.get('items', []) if it.get('name') == 'NBA - Winner'), None)
+              if not winner:
+                  print('  no "NBA - Winner" entry; skipping season'); continue
+
+              # Each entry in winner.futures is a provider — prefer DraftKings,
+              # fall back to whichever active provider has the most teams.
+              by_provider = {}
+              for fut in winner.get('futures', []):
+                  pname = (fut.get('provider') or {}).get('name', 'unknown')
+                  active = (fut.get('provider') or {}).get('active', 1)
+                  if not active: continue
+                  parsed = parse_provider_books(fut.get('books', []))
+                  if parsed: by_provider[pname] = parsed
+
+              print(f'  providers with odds: {sorted(by_provider.keys())}')
+              if 'DraftKings' in by_provider:
+                  probs = by_provider['DraftKings']
+                  source = 'espn-api / draftkings'
+              elif by_provider:
+                  pname, parsed = max(by_provider.items(), key=lambda kv: len(kv[1]))
+                  probs = parsed
+                  source = f'espn-api / {pname.lower()}'
+
+              if len(probs) >= 2:
+                  print(f'  ✓ {len(probs)} teams via {source}')
+                  break
+              else:
+                  probs = {}
 
           # ── Write result ──────────────────────────────────────────────
           # If both ESPN and DraftKings fail, we intentionally skip writing.
