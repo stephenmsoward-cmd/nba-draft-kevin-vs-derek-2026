@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-20T16:56:31.400566+00:00",
+  "updatedAt": "2026-05-21T16:40:58.507446+00:00",
   "entries": [
+    {
+      "date": "2026-05-21",
+      "templateId": "held1",
+      "variantIdx": 13,
+      "text": "NYK hosting back-to-back. They cash both \u2014 CLE heads home down 0-2.",
+      "pick": "NYK",
+      "aA": "CLE",
+      "hA": "NYK",
+      "result": null
+    },
     {
       "date": "2026-05-20",
       "templateId": "stole1",
@@ -9,7 +19,7 @@
       "pick": "SAS",
       "aA": "SAS",
       "hA": "OKC",
-      "result": null
+      "result": "loss"
     },
     {
       "date": "2026-05-19",
