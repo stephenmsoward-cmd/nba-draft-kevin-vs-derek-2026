@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-21T16:40:58.507446+00:00",
+  "updatedAt": "2026-05-22T16:28:59.998483+00:00",
   "entries": [
+    {
+      "date": "2026-05-22",
+      "templateId": "tied11",
+      "variantIdx": 8,
+      "text": "1-1 series, swing back to SAS. Home Game 3 is the loudest tip of the playoffs \u2014 SAS rides it.",
+      "pick": "SAS",
+      "aA": "OKC",
+      "hA": "SAS",
+      "result": null
+    },
     {
       "date": "2026-05-21",
       "templateId": "held1",
@@ -9,7 +19,7 @@
       "pick": "NYK",
       "aA": "CLE",
       "hA": "NYK",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-05-20",
