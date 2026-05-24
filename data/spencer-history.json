@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-23T15:05:15.892509+00:00",
+  "updatedAt": "2026-05-24T15:09:05.467390+00:00",
   "entries": [
+    {
+      "date": "2026-05-24",
+      "templateId": "lead21",
+      "variantIdx": 3,
+      "text": "OKC up 2-1 visiting SAS. Going down 3-1 ends seasons \u2014 SAS fights it off tonight.",
+      "pick": "OKC",
+      "aA": "OKC",
+      "hA": "SAS",
+      "result": null
+    },
     {
       "date": "2026-05-23",
       "templateId": "lead20",
@@ -9,7 +19,7 @@
       "pick": "NYK",
       "aA": "NYK",
       "hA": "CLE",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-05-22",
