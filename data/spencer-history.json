@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-24T15:09:05.467390+00:00",
+  "updatedAt": "2026-05-25T16:25:19.773239+00:00",
   "entries": [
+    {
+      "date": "2026-05-25",
+      "templateId": "elim",
+      "variantIdx": 12,
+      "text": "CLE is the lower seed playing the favorite. Eventually math wins, and tonight is eventually. NYK ends it.",
+      "pick": "NYK",
+      "aA": "NYK",
+      "hA": "CLE",
+      "result": null
+    },
     {
       "date": "2026-05-24",
       "templateId": "lead21",
@@ -9,7 +19,7 @@
       "pick": "OKC",
       "aA": "OKC",
       "hA": "SAS",
-      "result": null
+      "result": "loss"
     },
     {
       "date": "2026-05-23",
