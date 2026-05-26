@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-05-25T16:25:19.773239+00:00",
+  "updatedAt": "2026-05-26T17:28:32.884371+00:00",
   "entries": [
+    {
+      "date": "2026-05-26",
+      "templateId": "pivot22",
+      "variantIdx": 10,
+      "text": "Pivot game in OKC. The role players have figured out the matchups by now \u2014 OKC's bench tilts this one.",
+      "pick": "OKC",
+      "aA": "SAS",
+      "hA": "OKC",
+      "result": null
+    },
     {
       "date": "2026-05-25",
       "templateId": "elim",
@@ -9,7 +19,7 @@
       "pick": "NYK",
       "aA": "NYK",
       "hA": "CLE",
-      "result": null
+      "result": "win"
     },
     {
       "date": "2026-05-24",
@@ -290,11 +300,6 @@
       "aA": "BOS",
       "hA": "PHI",
       "result": "loss"
-    },
-    {
-      "date": "2026-04-22",
-      "seed": true,
-      "result": "win"
     }
   ]
 }
