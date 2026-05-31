@@ -1,10 +1,9 @@
 {
-  "ts": 1780180218179,
-  "updatedAt": "2026-05-30T22:30:18.179166+00:00",
+  "ts": 1780204481792,
+  "updatedAt": "2026-05-31T05:14:41.792790+00:00",
   "source": "espn-api / draftkings",
   "probs": {
-    "Oklahoma City Thunder": 0.4444444444444444,
-    "New York Knicks": 0.3333333333333333,
-    "San Antonio Spurs": 0.2898550724637681
+    "San Antonio Spurs": 0.6721311475409836,
+    "New York Knicks": 0.37037037037037035
   }
 }
