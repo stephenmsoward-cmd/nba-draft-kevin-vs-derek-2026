@@ -107,9 +107,18 @@
     }
     .clinch-banner.kevin { background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(59,130,246,0.06)); border-color: rgba(59,130,246,0.5); color: #dbeafe; }
     .clinch-banner.derek { background: linear-gradient(135deg, rgba(239,68,68,0.22), rgba(239,68,68,0.06)); border-color: rgba(239,68,68,0.5); color: #fee2e2; }
-    .clinch-banner .trophy { font-size: 1.2rem; }
+    .clinch-banner .trophy { font-size: 1.2rem; align-self: flex-start; }
     .clinch-banner .name-k { color: var(--kevin); }
     .clinch-banner .name-d { color: var(--derek); }
+    .clinch-banner .clinch-sub {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      opacity: 0.85;
+    }
+    .clinch-banner .clinch-sub strong { font-weight: 800; opacity: 1; }
     @keyframes clinch-glow {
       0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
       50%      { box-shadow: 0 0 24px -4px rgba(59,130,246,0.4); }
@@ -1546,6 +1555,10 @@ function renderScoreboard(elim, inPlayoffs, sm) {
 // "Clinched" = one drafter has reduced the other to 0 alive playoff
 // teams. The bet is decided even if the Finals haven't ended yet.
 const CLINCH_SEEN_KEY = 'nba26-bet-clinched-seen';
+// Locked-in dinner value for the 2026 entry (salary-cap-indexed). Used
+// to tease the pending tab in the clinch banner; the actual HoF row
+// drops in after the Finals when we also know the winning team.
+const PENDING_2026_VALUE = 356;
 
 function betClinchedBy(elim, inPlayoffs) {
   const alive = name => DRAFT[name].filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
@@ -1564,11 +1577,19 @@ function renderClinchBanner(elim, inPlayoffs) {
   const winner = betClinchedBy(elim, inPlayoffs);
   if (!winner) { el.innerHTML = ''; return; }
   const winnerCls = winner === 'Kevin' ? 'kevin' : 'derek';
+  const loser = winner === 'Kevin' ? 'Derek' : 'Kevin';
   const nameSpan  = winner === 'Kevin' ? '<span class="name-k">Kevin</span>' : '<span class="name-d">Derek</span>';
+  // Project the new outstanding tab once the 2026 entry lands.
+  const currentOutstanding = HOF_HISTORY.filter(h => !h.paid).reduce((s, h) => s + h.value, 0);
+  const projectedOutstanding = currentOutstanding + PENDING_2026_VALUE;
+  const fmt = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   el.innerHTML = `
     <div class="clinch-banner ${winnerCls}">
       <span class="trophy">🏆</span>
-      <span>${nameSpan} has clinched the 2026 bet — Finals will decide the team.</span>
+      <span>
+        ${nameSpan} has clinched the 2026 bet — Finals will decide the team.<br>
+        <span class="clinch-sub">Pending 2026 dinner: <strong>${fmt(PENDING_2026_VALUE)}</strong> · ${loser}'s new tab: <strong>${fmt(projectedOutstanding)}</strong></span>
+      </span>
     </div>
   `;
 
