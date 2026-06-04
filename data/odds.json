@@ -1,9 +1,9 @@
 {
-  "ts": 1780528633972,
-  "updatedAt": "2026-06-03T23:17:13.972353+00:00",
+  "ts": 1780552378798,
+  "updatedAt": "2026-06-04T05:52:58.798683+00:00",
   "source": "espn-api / draftkings",
   "probs": {
-    "San Antonio Spurs": 0.6491228070175439,
-    "New York Knicks": 0.39215686274509803
+    "New York Knicks": 0.5833333333333334,
+    "San Antonio Spurs": 0.45454545454545453
   }
 }
