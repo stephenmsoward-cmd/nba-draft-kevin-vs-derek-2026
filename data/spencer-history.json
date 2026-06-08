@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-06-07T15:26:20.091939+00:00",
+  "updatedAt": "2026-06-08T17:25:23.827662+00:00",
   "entries": [
+    {
+      "date": "2026-06-08",
+      "templateId": "lead20",
+      "variantIdx": 3,
+      "text": "SAS down 2-0, Game 3 at home. Home crowd buys them one win \u2014 they cash it tonight.",
+      "pick": "NYK",
+      "aA": "SAS",
+      "hA": "NYK",
+      "result": null
+    },
     {
       "date": "2026-06-05",
       "templateId": "stole1",
@@ -290,16 +300,6 @@
       "aA": "PHI",
       "hA": "BOS",
       "result": "loss"
-    },
-    {
-      "date": "2026-04-27",
-      "templateId": "elim",
-      "variantIdx": 1,
-      "text": "OKC has the closeout look. PHX's season ends tonight, probably in the fourth quarter.",
-      "pick": "OKC",
-      "aA": "OKC",
-      "hA": "PHX",
-      "result": "win"
     }
   ]
 }
