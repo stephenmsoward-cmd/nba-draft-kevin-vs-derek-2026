@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-06-09T16:33:03.070126+00:00",
+  "updatedAt": "2026-06-10T17:24:36.590999+00:00",
   "entries": [
+    {
+      "date": "2026-06-10",
+      "templateId": "lead21",
+      "variantIdx": 3,
+      "text": "NYK up 2-1 visiting SAS. Going down 3-1 ends seasons \u2014 SAS fights it off tonight.",
+      "pick": "NYK",
+      "aA": "SAS",
+      "hA": "NYK",
+      "result": null
+    },
     {
       "date": "2026-06-08",
       "templateId": "lead20",
@@ -289,16 +299,6 @@
       "pick": "ORL",
       "aA": "ORL",
       "hA": "DET",
-      "result": "loss"
-    },
-    {
-      "date": "2026-04-28",
-      "templateId": "elim",
-      "variantIdx": 2,
-      "text": "BOS up 3-1 and closing teams don't blink. Book it \u2014 BOS finishes the job.",
-      "pick": "BOS",
-      "aA": "PHI",
-      "hA": "BOS",
       "result": "loss"
     }
   ]
