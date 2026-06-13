@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-06-12T16:46:55.999504+00:00",
+  "updatedAt": "2026-06-13T15:43:31.234746+00:00",
   "entries": [
+    {
+      "date": "2026-06-13",
+      "templateId": "elim",
+      "variantIdx": 12,
+      "text": "SAS is the lower seed playing the favorite. Eventually math wins, and tonight is eventually. NYK ends it.",
+      "pick": "NYK",
+      "aA": "NYK",
+      "hA": "SAS",
+      "result": null
+    },
     {
       "date": "2026-06-10",
       "templateId": "lead21",
@@ -290,16 +300,6 @@
       "aA": "NYK",
       "hA": "ATL",
       "result": "win"
-    },
-    {
-      "date": "2026-04-29",
-      "templateId": "elim",
-      "variantIdx": 0,
-      "text": "DET faces elimination against ORL. Desperation buys one game, not four \u2014 ORL closes it out tonight.",
-      "pick": "ORL",
-      "aA": "ORL",
-      "hA": "DET",
-      "result": "loss"
     }
   ]
 }
