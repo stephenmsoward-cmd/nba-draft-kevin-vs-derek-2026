@@ -1555,10 +1555,8 @@ function renderScoreboard(elim, inPlayoffs, sm) {
 // "Clinched" = one drafter has reduced the other to 0 alive playoff
 // teams. The bet is decided even if the Finals haven't ended yet.
 const CLINCH_SEEN_KEY = 'nba26-bet-clinched-seen';
-// Locked-in dinner value for the 2026 entry (salary-cap-indexed). Used
-// to tease the pending tab in the clinch banner; the actual HoF row
-// drops in after the Finals when we also know the winning team.
-const PENDING_2026_VALUE = 356;
+const CHAMP_SEEN_KEY  = 'nba26-champ-seen';
+const PLAYOFF_YEAR    = 2026;
 
 function betClinchedBy(elim, inPlayoffs) {
   const alive = name => DRAFT[name].filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
@@ -1574,35 +1572,58 @@ function betClinchedBy(elim, inPlayoffs) {
 function renderClinchBanner(elim, inPlayoffs) {
   const el = document.getElementById('clinch-banner');
   if (!el) return;
-  const winner = betClinchedBy(elim, inPlayoffs);
+
+  // If the HoF already has an entry for this year's playoffs, the
+  // season is over — show the champion banner. Otherwise fall back to
+  // the clinched-but-Finals-pending state if applicable.
+  const champEntry = HOF_HISTORY.find(h => h.year === PLAYOFF_YEAR);
+  const winner = champEntry ? champEntry.winner : betClinchedBy(elim, inPlayoffs);
   if (!winner) { el.innerHTML = ''; return; }
+
   const winnerCls = winner === 'Kevin' ? 'kevin' : 'derek';
   const loser = winner === 'Kevin' ? 'Derek' : 'Kevin';
-  const nameSpan  = winner === 'Kevin' ? '<span class="name-k">Kevin</span>' : '<span class="name-d">Derek</span>';
-  // Project the new outstanding tab once the 2026 entry lands.
-  const currentOutstanding = HOF_HISTORY.filter(h => !h.paid).reduce((s, h) => s + h.value, 0);
-  const projectedOutstanding = currentOutstanding + PENDING_2026_VALUE;
+  const nameSpan = winner === 'Kevin' ? '<span class="name-k">Kevin</span>' : '<span class="name-d">Derek</span>';
+  const outstanding = HOF_HISTORY.filter(h => !h.paid).reduce((s, h) => s + h.value, 0);
   const fmt = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  let body, seenKey;
+  if (champEntry) {
+    const winCount = HOF_HISTORY.filter(h => h.winner === 'Kevin').length;
+    const lossCount = HOF_HISTORY.filter(h => h.winner === 'Derek').length;
+    const record = winner === 'Kevin' ? `${winCount}-${lossCount}` : `${lossCount}-${winCount}`;
+    body = `
+      <span>
+        ${nameSpan} wins the ${PLAYOFF_YEAR} bet — <strong>${champEntry.team}</strong> takes the chip.<br>
+        <span class="clinch-sub">All-time: <strong>${record}</strong> · ${loser}'s tab grows by <strong>${fmt(champEntry.value)}</strong> to <strong>${fmt(outstanding)}</strong></span>
+      </span>
+    `;
+    seenKey = CHAMP_SEEN_KEY;
+  } else {
+    body = `
+      <span>
+        ${nameSpan} has clinched the ${PLAYOFF_YEAR} bet — Finals will decide the team.<br>
+        <span class="clinch-sub">${loser}'s tab will grow when the dinner gets booked.</span>
+      </span>
+    `;
+    seenKey = CLINCH_SEEN_KEY;
+  }
+
   el.innerHTML = `
     <div class="clinch-banner ${winnerCls}">
       <span class="trophy">🏆</span>
-      <span>
-        ${nameSpan} has clinched the 2026 bet — Finals will decide the team.<br>
-        <span class="clinch-sub">Pending 2026 dinner: <strong>${fmt(PENDING_2026_VALUE)}</strong> · ${loser}'s new tab: <strong>${fmt(projectedOutstanding)}</strong></span>
-      </span>
+      ${body}
     </div>
   `;
 
-  // Fire confetti once per viewer on first sight of the clinch.
+  // Fire confetti once per viewer per state transition.
   let seen = null;
-  try { seen = localStorage.getItem(CLINCH_SEEN_KEY); } catch {}
+  try { seen = localStorage.getItem(seenKey); } catch {}
   if (seen !== winner) {
-    try { localStorage.setItem(CLINCH_SEEN_KEY, winner); } catch {}
+    try { localStorage.setItem(seenKey, winner); } catch {}
     const palette = winner === 'Kevin'
       ? ['#3b82f6','#60a5fa','#93c5fd','#dbeafe']
       : ['#ef4444','#f87171','#fca5a5','#fee2e2'];
     if (typeof fireConfetti === 'function') {
-      // Defer so the banner has a chance to mount first.
       setTimeout(() => fireConfetti(palette), 200);
     }
   }
@@ -3071,6 +3092,7 @@ async function loadData() {
 
 // ── Hall of Fame ──────────────────────────────────────────────────────
 const HOF_HISTORY = [
+  { year: 2026, winner: 'Kevin', team: 'NYK', dinner: null, paid: false, value: 356.00 },
   { year: 2025, winner: 'Kevin', team: 'OKC', dinner: null, paid: false, value: 323.77 },
   { year: 2024, winner: 'Kevin', team: 'BOS', dinner: null, paid: false, value: 313.24 },
   { year: 2023, winner: 'Kevin', team: 'DEN', dinner: null, paid: false, value: 284.77 },
