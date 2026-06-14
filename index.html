@@ -1772,7 +1772,7 @@ function celebrateNewClinches(sm) {
       seen[s.key] = now;
     }
   }
-  localStorage.setItem(CONFETTI_KEY, JSON.stringify(seen));
+  try { localStorage.setItem(CONFETTI_KEY, JSON.stringify(seen)); } catch {}
   if (!newClinches.length) return;
 
   // Pick a palette based on who benefited from the most-recent clinch.
@@ -1803,7 +1803,7 @@ function updateClinched(sm) {
   for (const s of sm.values()) {
     if (s.completed && !store[s.key]) store[s.key] = now;
   }
-  localStorage.setItem(CLINCHED_KEY, JSON.stringify(store));
+  try { localStorage.setItem(CLINCHED_KEY, JSON.stringify(store)); } catch {}
   return new Set(Object.keys(store));
 }
 
@@ -2355,7 +2355,7 @@ function updateHistory(elim, inPlayoffs) {
   hist.push({ day: today, k: kAlive, d: dAlive });
   hist.sort((a, b) => a.day.localeCompare(b.day));
   if (hist.length > 60) hist = hist.slice(-60);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist)); } catch {}
   return hist;
 }
 
@@ -3058,12 +3058,16 @@ async function loadData() {
       `Updated ${now.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
 
     // Defer cache write — it's not on the user's critical path.
-    const writeCache = () => localStorage.setItem('nba26-cache', JSON.stringify({
-      series:      [...sm.entries()],
-      elim:        [...elim],
-      inPlayoffs:  [...inP],
-      ts:          Date.now(),
-    }));
+    const writeCache = () => {
+      try {
+        localStorage.setItem('nba26-cache', JSON.stringify({
+          series:      [...sm.entries()],
+          elim:        [...elim],
+          inPlayoffs:  [...inP],
+          ts:          Date.now(),
+        }));
+      } catch {}
+    };
     if (typeof requestIdleCallback === 'function') requestIdleCallback(writeCache);
     else setTimeout(writeCache, 0);
 
@@ -3127,7 +3131,8 @@ function renderHallOfFame() {
   const totalPaid      = sumWhere(h => h.paid);
   const fmt = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const expanded = localStorage.getItem('nba26-hof-open') === '1';
+  let expanded = false;
+  try { expanded = localStorage.getItem('nba26-hof-open') === '1'; } catch {}
 
   const defendCls = defending.winner === 'Kevin' ? 'hof-winner-kevin' : 'hof-winner-derek';
   const summaryHTML = `
@@ -3185,8 +3190,11 @@ function renderHallOfFame() {
 }
 
 function toggleHallOfFame() {
-  const open = localStorage.getItem('nba26-hof-open') === '1';
-  localStorage.setItem('nba26-hof-open', open ? '0' : '1');
+  let open = false;
+  try {
+    open = localStorage.getItem('nba26-hof-open') === '1';
+    localStorage.setItem('nba26-hof-open', open ? '0' : '1');
+  } catch {}
   // Defer the heavy table render to the next frame so the browser can
   // paint the click feedback first. Cuts INP for this interaction
   // significantly (was ~80ms synchronous, now <16ms to first paint).
@@ -3234,7 +3242,8 @@ function renderSettlementCenter() {
     { id: '24mo',  label: '24 months',  detail: `${fmtMoney(settlementMonthly(outstanding, 0.1299, 24))}/mo at 12.99% APR`, monthly: settlementMonthly(outstanding, 0.1299, 24),  term: 24, apr: 0.1299 },
   ];
 
-  const selectedId = localStorage.getItem(SETTLEMENT_KEY) || 'pay4';
+  let selectedId = 'pay4';
+  try { selectedId = localStorage.getItem(SETTLEMENT_KEY) || 'pay4'; } catch {}
   const today = new Date().toLocaleDateString('en-CA');
   const disclaimer = SETTLEMENT_DISCLAIMERS[
     Math.abs(hashStr(today + 'settlement')) % SETTLEMENT_DISCLAIMERS.length
