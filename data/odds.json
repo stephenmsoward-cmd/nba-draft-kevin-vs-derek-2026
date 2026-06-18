@@ -1,16 +1,10 @@
 {
-  "ts": 1781607021978,
-  "updatedAt": "2026-06-16T10:50:21.978467+00:00",
+  "ts": 1781824610481,
+  "updatedAt": "2026-06-18T23:16:50.481519+00:00",
   "source": "espn-api / draftkings",
   "probs": {
-    "San Antonio Spurs": 0.2857142857142857,
-    "New York Knicks": 0.13333333333333333,
-    "Los Angeles Lakers": 0.034482758620689655,
-    "Miami Heat": 0.024390243902439025,
-    "Toronto Raptors": 0.009900990099009901,
-    "Phoenix Suns": 0.008264462809917356,
-    "Utah Jazz": 0.004975124378109453,
-    "Brooklyn Nets": 0.00398406374501992,
-    "Chicago Bulls": 0.0014265335235378032
+    "Golden State Warriors": 0.01639344262295082,
+    "Dallas Mavericks": 0.008264462809917356,
+    "Sacramento Kings": 0.000999000999000999
   }
 }
