@@ -1289,7 +1289,7 @@
   </div>
 
   <div class="section-header">
-    <span class="section-title">Today's Games</span>
+    <span class="section-title" id="games-title">Today's Games</span>
     <div class="section-line"></div>
   </div>
   <div id="games-container">
@@ -1374,9 +1374,25 @@ const getOwner = abbr => { for (const [n,t] of Object.entries(DRAFT)) if (t.incl
 const ownerCls = o => o === 'Kevin' ? 'owner-kevin' : o === 'Derek' ? 'owner-derek' : 'owner-none';
 
 // ── ESPN fetching ─────────────────────────────────────────────────────
+// ── Season lock ───────────────────────────────────────────────────────
+// The 2025-26 playoffs are over (NYK beat SAS 4-1, clinched Jun 13 2026).
+// With SEASON_LOCKED on, the page renders a frozen snapshot: no fetches
+// past SEASON_END, no live/upcoming games, no new Spencer picks.
+// ESPN's scoreboard ignores seasontype=3 for regular-season dates, so
+// without this lock the 2026-27 regular season leaks into the series map.
+// To reopen for the 2027 playoffs: set SEASON_LOCKED = false, update the
+// draft, playoff start date and HoF, then re-enable the three workflows.
+const SEASON_LOCKED = true;
+const SEASON_END    = '2026-06-13';
+const SEASON_FINALS = { winner: 'NYK', loser: 'SAS', score: '4–1', date: 'Jun 13, 2026' };
+
+// Playoff games only (type 3). Excludes play-in (5), regular season (2)
+// and preseason (1), which ESPN returns even when asked for seasontype=3.
+const isPlayoffEvent = e => !e.season || e.season.type === 3;
+
 function playoffDates() {
   const start = new Date('2026-04-18');
-  const today = new Date();
+  const today = SEASON_LOCKED ? new Date(SEASON_END) : new Date();
   const dates = [];
   for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1))
     dates.push(d.toISOString().slice(0,10).replace(/-/g,''));
@@ -1413,14 +1429,14 @@ function isDateFrozen(events, dateStr) {
 async function fetchDate(date, { bypassCache = false } = {}) {
   if (!bypassCache) {
     const cached = cacheGetDate(date);
-    if (cached?.frozen) return cached.events;
+    if (cached?.frozen) return cached.events.filter(isPlayoffEvent);
   }
   try {
     const r = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${date}&seasontype=3`
     );
     const j = await r.json();
-    const events = (j.events || []).map(e => ({ ...e, _date: date }));
+    const events = (j.events || []).filter(isPlayoffEvent).map(e => ({ ...e, _date: date }));
     cacheSetDate(date, events, isDateFrozen(events, date));
     return events;
   } catch {
@@ -1881,7 +1897,7 @@ const TEAM_FUN_FACTS = {
     "Donovan Mitchell averages 28 points and is still considered 'the second guy' by Cavs fans waiting for the next LeBron. They will be waiting a while.",
   ],
   NYK: [
-    "Last title: 1973. Longest drought of any Original-Era franchise. Ticket prices remain top-five, because of course they do.",
+    "Won the 2026 title, their first since 1973. A 53-year drought, over. Ticket prices went up anyway, because of course they did.",
     "MSG has hosted the Knicks since 1968 — four renovations, same block, same exact ceiling on the season.",
     "James Dolan owns the team and a blues band. His ownership of the band is the more popular gig.",
     "Spike Lee has had courtside seats for 35+ years. He's at this point a load-bearing column of the franchise's identity.",
@@ -2133,6 +2149,10 @@ function isCleanText(t) {
 }
 
 function spencerPrediction(liveEvents, sm) {
+  if (SEASON_LOCKED) {
+    const last = (cachedSpencerHistory?.entries || []).find(e => e.text && isCleanText(e.text));
+    return last ? last.text : null;
+  }
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   // Prefer the server-side history (canonical across all viewers).
   const serverEntries = cachedSpencerHistory?.entries || [];
@@ -2286,6 +2306,10 @@ function kabeerFactPick(liveEvents, sm, upcoming) {
   for (const s of sm.values()) {
     if (!s.completed) { push(s.awayAbbr); push(s.homeAbbr); }
   }
+  if (!candidates.length) {
+    // Offseason: rotate through every team that made the playoffs.
+    for (const s of sm.values()) { push(s.awayAbbr); push(s.homeAbbr); }
+  }
   if (!candidates.length) return null;
   // Prefer drafted teams
   const drafted = candidates.filter(a => !!getOwner(a));
@@ -2310,7 +2334,7 @@ function renderDesk(liveEvents, sm, upcoming) {
       <div class="desk-body">
         <div class="desk-head">
           <span class="desk-name">Spencer</span>
-          <span class="desk-topic">Today's Prediction${recLabel}</span>
+          <span class="desk-topic">${SEASON_LOCKED ? 'Final Prediction' : "Today's Prediction"}${recLabel}</span>
         </div>
         <div class="desk-quote">${prediction}</div>
       </div>
@@ -2346,6 +2370,10 @@ function updateHistory(elim, inPlayoffs) {
   const storedDays = new Set(hist.map(h => h.day));
   for (const s of HISTORY_SEED) {
     if (!storedDays.has(s.day)) hist.push(s);
+  }
+  if (SEASON_LOCKED) {
+    // Frozen: drop any post-season snapshots and stop appending new days.
+    return hist.filter(h => h.day <= SEASON_END).sort((a, b) => a.day.localeCompare(b.day));
   }
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   const kAlive = DRAFT.Kevin.filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
@@ -2663,6 +2691,7 @@ let cachedInPlayoffs = new Set();  // current playoff teams, for odds filtering
 const ODDS_API_KEY = '0e05e2616bdebdda28c75f5efd959281';
 
 async function findNextGameDate() {
+  if (SEASON_LOCKED) return null;
   for (let i = 1; i <= 8; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -2677,6 +2706,7 @@ async function findNextGameDate() {
 
 // Fetch next upcoming games (up to `max`) across the next 7 days.
 async function findUpcomingGames(max = 3) {
+  if (SEASON_LOCKED) return null;
   for (let i = 1; i <= 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -2723,6 +2753,7 @@ function renderUpcoming(upcoming) {
 }
 
 async function fetchLiveGames() {
+  if (SEASON_LOCKED) return [];
   try {
     // Use ET date — avoids UTC midnight rollover showing wrong day
     const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).replace(/-/g,'');
@@ -2730,12 +2761,36 @@ async function fetchLiveGames() {
       `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${todayET}&seasontype=3`
     );
     const j = await r.json();
-    return (j.events || []).map(e => ({ ...e, _date: todayET }));
+    return (j.events || []).filter(isPlayoffEvent).map(e => ({ ...e, _date: todayET }));
   } catch { return []; }
 }
 
 async function renderLiveGames(events, sm) {
   const el = document.getElementById('games-container');
+
+  if (SEASON_LOCKED) {
+    const title = document.getElementById('games-title');
+    if (title) title.textContent = '2026 NBA Finals';
+    const f = SEASON_FINALS;
+    const wo = getOwner(f.winner), lo = getOwner(f.loser);
+    const tag = own => own
+      ? `<span class="up-tag ${ownerCls(own)}" style="background:${own==='Kevin'?'rgba(59,130,246,0.15)':'rgba(239,68,68,0.15)'}">${own==='Kevin'?'K':'D'}</span>`
+      : '';
+    el.className = '';
+    el.innerHTML = `<div class="upcoming-wrap">
+      <div class="upcoming-head">Season complete &middot; clinched ${f.date}</div>
+      <div class="upcoming-row">
+        <span class="up-time">🏆 Champion</span>
+        <span class="up-teams">
+          <span class="up-abbr">${f.winner}</span>${tag(wo)}
+          <span class="up-at">def.</span>
+          <span class="up-abbr">${f.loser}</span>${tag(lo)}
+          <span class="up-at">${f.score}</span>
+        </span>
+      </div>
+    </div>`;
+    return;
+  }
 
   if (!events.length) {
     const upcoming = await findUpcomingGames(3);
@@ -3054,8 +3109,9 @@ async function loadData() {
     renderRaceChart(hist);
 
     const now = new Date();
-    document.getElementById('last-updated').textContent =
-      `Updated ${now.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
+    document.getElementById('last-updated').textContent = SEASON_LOCKED
+      ? '2025–26 season final'
+      : `Updated ${now.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
 
     // Defer cache write — it's not on the user's critical path.
     const writeCache = () => {
