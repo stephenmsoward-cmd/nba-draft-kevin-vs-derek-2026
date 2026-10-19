@@ -2356,34 +2356,52 @@ function renderDesk(liveEvents, sm, upcoming) {
 }
 
 // ── Historical race chart ─────────────────────────────────────────────
-const HISTORY_KEY = 'nba26-history';
-// Hardcoded baseline — both drafters started with 10 picks, then play-in
-// (Apr 15-16) eliminated CHA + GSW (Kevin) and LAC + MIA (Derek), leaving 8 each.
+// Rebuilt from game results on every load, so every viewer sees the full
+// curve (it used to be a per-browser log of the days the page was opened).
+// Baseline: both drafters started with 10 picks; the play-in (Apr 15-16)
+// knocked out CHA + GSW (Kevin) and LAC + MIA (Derek), leaving 8 each.
 const HISTORY_SEED = [
   { day: '2026-04-15', k: 10, d: 10 },
   { day: '2026-04-16', k: 8,  d: 8  },
 ];
-function updateHistory(elim, inPlayoffs) {
-  let hist = [];
-  try { hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch {}
-  // Merge seed entries that aren't already recorded
-  const storedDays = new Set(hist.map(h => h.day));
-  for (const s of HISTORY_SEED) {
-    if (!storedDays.has(s.day)) hist.push(s);
+const PLAYOFF_FIRST_DAY = '2026-04-18';
+
+function buildHistoryFromEvents(events) {
+  const iso = s => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+  const field = new Set();   // every team that played a playoff game
+  const finals = [];         // completed games, for elimination dates
+  const seen = new Set();    // historical + live fetches overlap on today
+  for (const ev of events) {
+    if (ev.id && seen.has(ev.id)) continue;
+    if (ev.id) seen.add(ev.id);
+    const comp = ev.competitions?.[0];
+    const cs = comp?.competitors || [];
+    for (const c of cs) field.add(norm(c.team?.abbreviation));
+    if (comp?.status?.type?.state !== 'post') continue;
+    const w = cs.find(c => c.winner), l = cs.find(c => !c.winner);
+    if (w && l) finals.push({ day: iso(ev._date), w: norm(w.team?.abbreviation), l: norm(l.team?.abbreviation) });
   }
-  if (SEASON_LOCKED) {
-    // Frozen: drop any post-season snapshots and stop appending new days.
-    return hist.filter(h => h.day <= SEASON_END).sort((a, b) => a.day.localeCompare(b.day));
+  if (!field.size) return HISTORY_SEED;
+
+  // A team is out on the day its opponent wins game 4 of their series.
+  finals.sort((a, b) => a.day.localeCompare(b.day));
+  const wins = {}, elimDay = {};
+  for (const g of finals) {
+    const key = [g.w, g.l].sort().join('_') + ':' + g.w;
+    wins[key] = (wins[key] || 0) + 1;
+    if (wins[key] === 4 && !elimDay[g.l]) elimDay[g.l] = g.day;
   }
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-  const kAlive = DRAFT.Kevin.filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
-  const dAlive = DRAFT.Derek.filter(t => inPlayoffs.has(t) && !elim.has(t)).length;
-  // Replace today's entry (single snapshot per day, updated to latest)
-  hist = hist.filter(h => h.day !== today);
-  hist.push({ day: today, k: kAlive, d: dAlive });
-  hist.sort((a, b) => a.day.localeCompare(b.day));
-  if (hist.length > 60) hist = hist.slice(-60);
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist)); } catch {}
+
+  const last = SEASON_LOCKED ? SEASON_END
+    : new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const alive = (name, day) => DRAFT[name]
+    .filter(t => field.has(t) && !(elimDay[t] && elimDay[t] <= day)).length;
+  const hist = [...HISTORY_SEED];
+  for (let d = new Date(PLAYOFF_FIRST_DAY + 'T00:00:00Z'); ; d.setUTCDate(d.getUTCDate() + 1)) {
+    const day = d.toISOString().slice(0, 10);
+    if (day > last) break;
+    hist.push({ day, k: alive('Kevin', day), d: alive('Derek', day) });
+  }
   return hist;
 }
 
@@ -2394,15 +2412,22 @@ function renderRaceChart(hist) {
   const W = 300, H = 180, pad = { t: 10, r: 10, b: 22, l: 22 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const maxY = 10, n = hist.length;
-  const x = i => pad.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
+  const dayMs = d => Date.parse(d + 'T12:00:00Z');
+  const t0 = dayMs(hist[0].day), span = dayMs(hist[n - 1].day) - t0;
+  const x = i => pad.l + (span === 0 ? iw / 2 : ((dayMs(hist[i].day) - t0) / span) * iw);
   const y = v => pad.t + (1 - v / maxY) * ih;
   // yOffset lets us nudge one line a hair so overlapping values stay visible
   const line = (key, color, opts = {}) => {
     const { dash, width = 2, yOffset = 0 } = opts;
-    const pts = hist.map((h, i) => `${x(i).toFixed(1)},${(y(h[key]) + yOffset).toFixed(1)}`).join(' ');
+    // Stepped: counts hold flat until the elimination day, then drop.
+    const yy = v => (y(v) + yOffset).toFixed(1);
+    const pts = hist.map((h, i) => i === 0
+      ? `${x(i).toFixed(1)},${yy(h[key])}`
+      : `${x(i).toFixed(1)},${yy(hist[i - 1][key])} ${x(i).toFixed(1)},${yy(h[key])}`).join(' ');
     const dashAttr = dash ? ` stroke-dasharray="${dash}"` : '';
-    return `<polyline fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round"${dashAttr} points="${pts}"/>` +
-      hist.map((h, i) => `<circle cx="${x(i).toFixed(1)}" cy="${(y(h[key]) + yOffset).toFixed(1)}" r="2.5" fill="${color}"/>`).join('');
+    const dots = hist.map((h, i) => (i === 0 || i === n - 1 || h[key] !== hist[i - 1][key])
+      ? `<circle cx="${x(i).toFixed(1)}" cy="${yy(h[key])}" r="2.5" fill="${color}"/>` : '').join('');
+    return `<polyline fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round"${dashAttr} points="${pts}"/>` + dots;
   };
   // Grid / axes
   const ticks = [0, 5, 10];
@@ -2410,8 +2435,9 @@ function renderRaceChart(hist) {
     `<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(t)}" y2="${y(t)}" stroke="#1a2840" stroke-width="1"/>` +
     `<text x="${pad.l - 4}" y="${y(t) + 3}" fill="#64748b" font-size="9" text-anchor="end">${t}</text>`
   ).join('');
-  const firstDay = new Date(hist[0].day).toLocaleDateString('en-US', { month:'short', day:'numeric' });
-  const lastDay = new Date(hist[hist.length-1].day).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const fmtDay = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const firstDay = fmtDay(hist[0].day);
+  const lastDay = fmtDay(hist[n - 1].day);
   el.innerHTML = `
     <div class="race-chart-title">Teams Alive Over Time</div>
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
@@ -3105,7 +3131,7 @@ async function loadData() {
     renderDesk(liveEvents, sm, upcomingForDesk);
     await yieldToMain();
     renderTeams(elim, inP);
-    const hist = updateHistory(elim, inP);
+    const hist = buildHistoryFromEvents([...events, ...liveEvents]);
     renderRaceChart(hist);
 
     const now = new Date();
